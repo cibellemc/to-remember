@@ -62,3 +62,4 @@ class WelcomeView(ft.View):
 
     def go_to_select_role(self, e):
         print("Redirecionando - Tela de escolha de perfil")
+        self.page.go("/select-role")
