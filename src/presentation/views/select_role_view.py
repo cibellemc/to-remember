@@ -1,9 +1,13 @@
 import flet as ft
-# from presentation.components.action_button import ActionButton
+from common.colors import BACKGROUND_LIGHT, PRIMARY, TEXT_LIGHT, TEXT_MUTED
 
 class SelectRoleView(ft.View):
     def __init__(self, page: ft.Page):
-        super().__init__(route="/select-role")
+        super().__init__(
+            route="/select-role",
+            bgcolor=BACKGROUND_LIGHT, 
+            padding=ft.padding.all(20)
+        )
         self.page = page
         self.selected_role = None 
 
@@ -11,7 +15,6 @@ class SelectRoleView(ft.View):
             content=ft.ElevatedButton(
                 text="Continuar",
                 on_click=self.go_to_login,
-                
                 style=ft.ButtonStyle(
                     padding=ft.padding.symmetric(vertical=24, horizontal=32),
                     text_style=ft.TextStyle(
@@ -24,43 +27,71 @@ class SelectRoleView(ft.View):
             ),
             padding=ft.padding.only(bottom=40, left=40, right=40), 
             alignment=ft.alignment.center,
+            visible=False 
         )
         
-        # CARD 1: Paciente
+        # --- Cards de Alto Contraste ---
         self.patient_card = self.create_role_card(
             role_name="patient",
-            text="Paciente",
-            icon_or_image=ft.Icon(ft.Icons.ELDERLY_WOMAN, size=80) 
+            title="Paciente",
+            subtitle="A pessoa que vai treinar a memória",
+            icon_control=ft.Icon(
+                ft.Icons.ELDERLY, 
+                size=60, 
+                color=PRIMARY 
+            )
         )
         
-        # CARD 2: Cuidador
         self.caregiver_card = self.create_role_card(
             role_name="caregiver",
-            text="Cuidador",
-            icon_or_image=ft.Icon(ft.Icons.MEDICAL_SERVICES_OUTLINED, size=80)
+            title="Cuidador",
+            subtitle="Alguém que ajuda outra pessoa",
+            icon_control=ft.Icon(
+                ft.Icons.HEALTH_AND_SAFETY_OUTLINED, 
+                size=60, 
+                color=PRIMARY
+            )
         )
 
-        # Container do "meio" (sem mudanças)
+        # --- Layout Principal (sem mudanças) ---
+        header_block = ft.Column(
+            [
+                ft.Text(
+                    value="Selecione o seu perfil",
+                    size=24,
+                    weight=ft.FontWeight.BOLD,
+                    text_align=ft.TextAlign.CENTER,
+                    color=TEXT_LIGHT, 
+                ),
+                ft.Text(
+                    value="Quem vai usar este aplicativo?",
+                    size=16,
+                    text_align=ft.TextAlign.CENTER,
+                    color=TEXT_MUTED, 
+                ),
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=5
+        )
+
+        cards_row = ft.Row(
+            [
+                self.patient_card,
+                self.caregiver_card,
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=20,
+        )
+
         main_content = ft.Container(
             content=ft.Column(
                 [
-                    ft.Text(
-                        value="Selecione o seu perfil para começar",
-                        size=18,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Row(
-                        [
-                            self.patient_card,
-                            self.caregiver_card,
-                        ],
-                        alignment=ft.MainAxisAlignment.CENTER,
-                        spacing=20,
-                    ),
+                    header_block,
+                    cards_row,
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,
-                spacing=30,
+                spacing=30, 
             ),
             alignment=ft.alignment.center,
             expand=True,
@@ -70,54 +101,114 @@ class SelectRoleView(ft.View):
             ft.Column(
                 [
                     main_content,
-                    self.continue_button # Adiciona o componente
+                    self.continue_button 
                 ],
-                expand=True
+                expand=True,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                alignment=ft.MainAxisAlignment.CENTER,
             )
         ]
 
-    def create_role_card(self, role_name: str, text: str, icon_or_image: ft.Control):
-        return ft.Container(
+    def create_role_card(self, role_name: str, title: str, subtitle: str, icon_control: ft.Icon):
+        
+        # Cria os controles de texto
+        title_text = ft.Text(
+            title, 
+            size=20, 
+            weight=ft.FontWeight.BOLD, 
+            color=TEXT_LIGHT 
+        )
+        
+        subtitle_text = ft.Text(
+            subtitle, 
+            size=14, 
+            color=TEXT_MUTED, 
+            text_align=ft.TextAlign.CENTER
+        )
+        
+        # Cria o card (Container)
+        card = ft.Container(
             content=ft.Column(
                 [
-                    icon_or_image,
-                    ft.Text(text, size=18, weight=ft.FontWeight.BOLD)
+                    icon_control,
+                    title_text,
+                    subtitle_text
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,
-                spacing=15,
+                spacing=10,
             ),
-            width=150,
-            height=150,
+            width=160,  
+            height=200, 
             border_radius=12,
-            bgcolor=ft.Colors.ON_SURFACE_VARIANT,
+            
+            bgcolor=ft.Colors.WHITE, 
+            border=ft.border.all(2, ft.Colors.GREY_300), 
             on_click=lambda e: self.select_role(role_name),
             data=role_name,
-            padding=10,
+            padding=ft.padding.all(15),
         )
+        
+        # --- MÁGICA AQUI ---
+        # Armazena referências aos controles dentro do próprio card
+        # para que 'select_role' possa acessá-los
+        card.icon_control = icon_control
+        card.title_text = title_text
+        card.subtitle_text = subtitle_text
+        
+        return card
 
-    # select_role (sem mudanças)
+    # 2. FUNÇÃO ATUALIZADA: select_role
     def select_role(self, role: str):
+        """
+        Atualiza os cards para refletir a seleção com 
+        alto contraste (fundo e cores de texto).
+        """
         self.selected_role = role
         
-        self.patient_card.bgcolor = ft.Colors.ON_SURFACE_VARIANT
-        self.caregiver_card.bgcolor = ft.Colors.ON_SURFACE_VARIANT
-        self.patient_card.border = None
-        self.caregiver_card.border = None
+        # --- ESTADO DE RESET (Não Selecionado) ---
+        # Define o estado de "não selecionado" para AMBOS os cards
         
-        selected_border = ft.border.all(4, ft.Colors.PRIMARY)
+        # Card Paciente (Reset)
+        self.patient_card.bgcolor = ft.Colors.WHITE
+        self.patient_card.border = ft.border.all(2, ft.Colors.GREY_300)
+        self.patient_card.icon_control.color = PRIMARY
+        self.patient_card.title_text.color = TEXT_LIGHT
+        self.patient_card.subtitle_text.color = TEXT_MUTED
+        
+        # Card Cuidador (Reset)
+        self.caregiver_card.bgcolor = ft.Colors.WHITE
+        self.caregiver_card.border = ft.border.all(2, ft.Colors.GREY_300)
+        self.caregiver_card.icon_control.color = PRIMARY
+        self.caregiver_card.title_text.color = TEXT_LIGHT
+        self.caregiver_card.subtitle_text.color = TEXT_MUTED
 
+        # --- ESTADO SELECIONADO ---
+        # Aplica o estado de "selecionado" (alto contraste)
+        # apenas no card que foi clicado.
+        
+        selected_card = None
         if role == "patient":
-            self.patient_card.bgcolor = ft.Colors.PRIMARY_CONTAINER
-            self.patient_card.border = selected_border
+            selected_card = self.patient_card
         else:
-            self.caregiver_card.bgcolor = ft.Colors.PRIMARY_CONTAINER
-            self.caregiver_card.border = selected_border
+            selected_card = self.caregiver_card
             
+        # Altera o fundo para a cor primária
+        selected_card.bgcolor = PRIMARY 
+        # Altera a borda (a sua borda branca é uma boa ideia)
+        selected_card.border = ft.border.all(4, ft.Colors.WHITE)
+        
+        # --- MUDANÇA DE ACESSIBILIDADE ---
+        # Altera TODAS as cores internas para BRANCO
+        selected_card.icon_control.color = ft.Colors.WHITE
+        selected_card.title_text.color = ft.Colors.WHITE
+        selected_card.subtitle_text.color = ft.Colors.WHITE
+            
+        # Exibe o botão de continuar
         self.continue_button.visible = True
-        self.update() 
+        self.update() # Atualiza a UI para mostrar as mudanças
 
-    # go_to_login (sem mudanças)
+    # 3. Lógica de navegação (sem mudanças)
     def go_to_login(self, e):
         if self.selected_role:
             self.page.go(f"/login/{self.selected_role}")

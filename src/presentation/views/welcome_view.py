@@ -1,9 +1,13 @@
-# presentation/views/welcome_view.py
 import flet as ft
+from common.colors import BACKGROUND_LIGHT, TEXT_LIGHT, TEXT_SUBTLE
+from presentation.components.action_button import ActionButton
 
 class WelcomeView(ft.View):
     def __init__(self, page: ft.Page):
-        super().__init__(route="/")
+        super().__init__(
+            route="/",
+            bgcolor=BACKGROUND_LIGHT, 
+        )
         self.page = page
 
         text_block = ft.Container(
@@ -14,12 +18,13 @@ class WelcomeView(ft.View):
                         size=32,
                         weight=ft.FontWeight.BOLD,
                         text_align=ft.TextAlign.CENTER,
+                        color=TEXT_LIGHT, 
                     ),
                     ft.Text(
                         value="Um aplicativo projetado para estimular a mente e acompanhar seu desempenho.",
                         size=16,
                         text_align=ft.TextAlign.CENTER,
-                        width=300, # garantir quebra de linha mesmo nos dispositivos maiores
+                        color=TEXT_SUBTLE, 
                     ),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -28,25 +33,12 @@ class WelcomeView(ft.View):
             ),
             alignment=ft.alignment.center,
             expand=True, 
+            padding=ft.padding.symmetric(horizontal=40), 
         )
 
-        start_button = ft.Container(
-            content=ft.ElevatedButton(
-                text="Começar",
-                on_click=self.go_to_select_role,
-                
-                style=ft.ButtonStyle(
-                    padding=ft.padding.symmetric(vertical=24, horizontal=32),
-                    text_style=ft.TextStyle(
-                        size=18, 
-                        weight=ft.FontWeight.BOLD
-                    ),
-                    shape=ft.RoundedRectangleBorder(radius=10) 
-                ),
-                expand=True,
-            ),
-            padding=ft.padding.only(bottom=40, left=40, right=40), 
-            alignment=ft.alignment.center,
+        start_button = ActionButton( 
+            text="Começar",
+            on_click=self.go_to_select_role
         )
 
         self.controls = [
