@@ -1,5 +1,6 @@
 import flet as ft
 from common.colors import BACKGROUND_LIGHT, PRIMARY, TEXT_LIGHT, TEXT_MUTED
+from presentation.components.action_button import ActionButton
 
 class SelectRoleView(ft.View):
     def __init__(self, page: ft.Page):
@@ -11,26 +12,6 @@ class SelectRoleView(ft.View):
         self.page = page
         self.selected_role = None 
 
-        self.continue_button = ft.Container(
-            content=ft.ElevatedButton(
-                text="Continuar",
-                on_click=self.go_to_login,
-                style=ft.ButtonStyle(
-                    padding=ft.padding.symmetric(vertical=24, horizontal=32),
-                    text_style=ft.TextStyle(
-                        size=18, 
-                        weight=ft.FontWeight.BOLD
-                    ),
-                    shape=ft.RoundedRectangleBorder(radius=10) 
-                ),
-                expand=True,
-            ),
-            padding=ft.padding.only(bottom=40, left=40, right=40), 
-            alignment=ft.alignment.center,
-            visible=False 
-        )
-        
-        # --- Cards de Alto Contraste ---
         self.patient_card = self.create_role_card(
             role_name="patient",
             title="Paciente",
@@ -53,7 +34,6 @@ class SelectRoleView(ft.View):
             )
         )
 
-        # --- Layout Principal (sem mudanças) ---
         header_block = ft.Column(
             [
                 ft.Text(
@@ -96,6 +76,14 @@ class SelectRoleView(ft.View):
             alignment=ft.alignment.center,
             expand=True,
         )
+
+
+        self.continue_button = ActionButton( 
+            text="Continuar",
+            on_click=self.go_to_login
+        )
+        
+        self.continue_button.visible = False
 
         self.controls = [
             ft.Column(
@@ -149,66 +137,44 @@ class SelectRoleView(ft.View):
             padding=ft.padding.all(15),
         )
         
-        # --- MÁGICA AQUI ---
-        # Armazena referências aos controles dentro do próprio card
-        # para que 'select_role' possa acessá-los
         card.icon_control = icon_control
         card.title_text = title_text
         card.subtitle_text = subtitle_text
         
         return card
 
-    # 2. FUNÇÃO ATUALIZADA: select_role
     def select_role(self, role: str):
-        """
-        Atualiza os cards para refletir a seleção com 
-        alto contraste (fundo e cores de texto).
-        """
         self.selected_role = role
         
-        # --- ESTADO DE RESET (Não Selecionado) ---
-        # Define o estado de "não selecionado" para AMBOS os cards
-        
-        # Card Paciente (Reset)
         self.patient_card.bgcolor = ft.Colors.WHITE
         self.patient_card.border = ft.border.all(2, ft.Colors.GREY_300)
         self.patient_card.icon_control.color = PRIMARY
         self.patient_card.title_text.color = TEXT_LIGHT
         self.patient_card.subtitle_text.color = TEXT_MUTED
         
-        # Card Cuidador (Reset)
         self.caregiver_card.bgcolor = ft.Colors.WHITE
         self.caregiver_card.border = ft.border.all(2, ft.Colors.GREY_300)
         self.caregiver_card.icon_control.color = PRIMARY
         self.caregiver_card.title_text.color = TEXT_LIGHT
         self.caregiver_card.subtitle_text.color = TEXT_MUTED
 
-        # --- ESTADO SELECIONADO ---
-        # Aplica o estado de "selecionado" (alto contraste)
-        # apenas no card que foi clicado.
-        
         selected_card = None
         if role == "patient":
             selected_card = self.patient_card
         else:
             selected_card = self.caregiver_card
             
-        # Altera o fundo para a cor primária
         selected_card.bgcolor = PRIMARY 
-        # Altera a borda (a sua borda branca é uma boa ideia)
         selected_card.border = ft.border.all(4, ft.Colors.WHITE)
         
-        # --- MUDANÇA DE ACESSIBILIDADE ---
-        # Altera TODAS as cores internas para BRANCO
         selected_card.icon_control.color = ft.Colors.WHITE
         selected_card.title_text.color = ft.Colors.WHITE
         selected_card.subtitle_text.color = ft.Colors.WHITE
             
-        # Exibe o botão de continuar
-        self.continue_button.visible = True
-        self.update() # Atualiza a UI para mostrar as mudanças
 
-    # 3. Lógica de navegação (sem mudanças)
+        self.continue_button.visible = True
+        self.update() 
+
     def go_to_login(self, e):
         if self.selected_role:
             self.page.go(f"/login/{self.selected_role}")

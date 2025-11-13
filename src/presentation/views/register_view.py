@@ -1,66 +1,91 @@
 import flet as ft
+# Imports ajustados para as novas cores
+from common.colors import BACKGROUND_LIGHT, TEXT_LIGHT, TEXT_MUTED, PRIMARY
+from presentation.components.action_button import ActionButton
 
 class RegisterView(ft.View):
     def __init__(self, page: ft.Page, role: str, auth_service):
-        super().__init__(route=f"/register/{role}")
+        super().__init__(
+            route=f"/register/{role}",
+            bgcolor=BACKGROUND_LIGHT, # Fundo claro
+        )
         self.page = page
         self.role = role
         self.auth_service = auth_service
         
         title = "Paciente" if role == "patient" else "Cuidador"
 
+        # Sua AppBar (Fundo branco, texto escuro)
         self.appbar = ft.AppBar(
-            title=ft.Text(f"Cadastro de {title}"),
+            title=ft.Text(f"Cadastro de {title}", color=TEXT_LIGHT), # Texto escuro
             leading=ft.IconButton(
                 icon=ft.Icons.ARROW_BACK,
                 on_click=self.go_back_to_login,
+                icon_color=TEXT_LIGHT # Ícone escuro
             ),
-            bgcolor=ft.Colors.ON_SURFACE_VARIANT,
+            bgcolor=ft.Colors.WHITE, # Fundo branco para a AppBar
+            elevation=1 # Uma sombra leve para destacar
         )
         
+        # Seus Campos de Texto (estilo M3 com "label")
+        # Todos os campos com as novas cores de label e texto digitado
         self.fullname_field = ft.TextField(
             label="Nome Completo",
             autofill_hints=ft.AutofillHint.NAME,
+            label_style=ft.TextStyle(color=TEXT_MUTED),
+            text_style=ft.TextStyle(color=TEXT_LIGHT),
+            border_color=ft.Colors.GREY_300,
+            focused_border_color=PRIMARY,
         )
-        
         self.email_field = ft.TextField(
             label="E-mail",
             autofill_hints=ft.AutofillHint.EMAIL,
+            label_style=ft.TextStyle(color=TEXT_MUTED),
+            text_style=ft.TextStyle(color=TEXT_LIGHT),
+            border_color=ft.Colors.GREY_300,
+            focused_border_color=PRIMARY,
         )
-        
         self.password_field = ft.TextField(
             label="Senha",
             password=True,
             can_reveal_password=True,
             autofill_hints=ft.AutofillHint.NEW_PASSWORD,
+            label_style=ft.TextStyle(color=TEXT_MUTED),
+            text_style=ft.TextStyle(color=TEXT_LIGHT),
+            border_color=ft.Colors.GREY_300,
+            focused_border_color=PRIMARY,
         )
-        
         self.confirm_password_field = ft.TextField(
             label="Confirmar Senha",
             password=True,
             can_reveal_password=True,
             autofill_hints=ft.AutofillHint.NEW_PASSWORD,
+            label_style=ft.TextStyle(color=TEXT_MUTED),
+            text_style=ft.TextStyle(color=TEXT_LIGHT),
+            border_color=ft.Colors.GREY_300,
+            focused_border_color=PRIMARY,
         )
         
-        self.continue_button = ft.Container(
-            content=ft.ElevatedButton(
-                text="Continuar",
-                on_click=self.handle_register,
-                
-                style=ft.ButtonStyle(
-                    padding=ft.padding.symmetric(vertical=24, horizontal=32),
-                    text_style=ft.TextStyle(
-                        size=18, 
-                        weight=ft.FontWeight.BOLD
-                    ),
-                    shape=ft.RoundedRectangleBorder(radius=10) 
+        self.continue_button = ActionButton(
+            text="Continuar",
+            on_click=self.handle_register
+        )
+        self.continue_button.padding = ft.padding.symmetric(horizontal=40)
+
+        # Link de Login
+        login_link = ft.Row(
+            [
+                ft.Text("Já tem uma conta?", color=TEXT_MUTED),
+                ft.TextButton(
+                    "Entre", 
+                    on_click=self.go_back_to_login,
+                    style=ft.ButtonStyle(color=PRIMARY) # Cor do link
                 ),
-                expand=True,
-            ),
-            padding=ft.padding.only(bottom=40, left=40, right=40), 
-            alignment=ft.alignment.center,
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
         )
 
+        # --- Layout Consistente (Coluna Única Rolável) ---
         self.controls = [
             ft.Container(
                 content=ft.Column(
@@ -68,7 +93,8 @@ class RegisterView(ft.View):
                         ft.Text(
                             f"Crie sua conta de {title}",
                             size=24, 
-                            weight=ft.FontWeight.BOLD
+                            weight=ft.FontWeight.BOLD,
+                            color=TEXT_LIGHT # Texto escuro
                         ),
                         
                         ft.AutofillGroup(
@@ -79,30 +105,53 @@ class RegisterView(ft.View):
                                     self.password_field,
                                     self.confirm_password_field,
                                 ],
-                                spacing=10 # Espaço pequeno entre os campos
+                                spacing=20 # Mais espaço entre os campos
                             )
                         ),
                         
-                        ft.Container(height=10), # Espaçador
+                        ft.Container(height=20), # Espaçador maior
                         
-                        self.continue_button,
+                        self.continue_button, 
+                        login_link,           
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=20, 
+                    spacing=30, # Mais espaço entre blocos
+                    scroll=ft.ScrollMode.ADAPTIVE,
                 ),
-                padding=20, 
+                padding=ft.padding.all(30), # Padding maior para a tela toda
                 expand=True,
             )
         ]
 
-
     def handle_register(self, e):
-        # (Nenhuma mudança aqui)
+        # Lógica de validação de campos
+        if not all([self.fullname_field.value, self.email_field.value, 
+                    self.password_field.value, self.confirm_password_field.value]):
+            self.page.show_snack_bar(
+                ft.SnackBar(
+                    ft.Text("Por favor, preencha todos os campos.", color=ft.colors.WHITE),
+                    bgcolor=ft.Colors.RED_500,
+                )
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
+            return
+        
+        if self.password_field.value != self.confirm_password_field.value:
+            self.page.show_snack_bar(
+                ft.SnackBar(
+                    ft.Text("As senhas não coincidem.", color=ft.Colors.WHITE),
+                    bgcolor=ft.Colors.RED_500,
+                )
+            )
+            self.page.snack_bar.open = True
+            self.page.update()
+            return
+
         print("Simulando cadastro...")
-        # Lógica de cadastro real viria aqui
-        self.page.views.clear()
+        # self.auth_service.register(self.fullname_field.value, self.email_field.value, 
+        #                           self.password_field.value, self.role)
         self.page.go(f"/dashboard/{self.role}")
 
     def go_back_to_login(self, e):
-        # (Nenhuma mudança aqui)
         self.page.go(f"/login/{self.role}")

@@ -29,8 +29,8 @@ copyright = "Copyright (C) 2025 by Cibelle Maciel"
 [tool.flet.app]
 path = "src"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "flet[all]==0.28.3",
 ]
 

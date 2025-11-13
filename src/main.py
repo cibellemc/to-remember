@@ -6,13 +6,30 @@ from presentation.views.select_role_view import SelectRoleView
 from presentation.views.login_view import LoginView
 from presentation.views.register_view import RegisterView
 from presentation.views.dashboard_view import DashboardView
-
+from common.colors import PRIMARY, BACKGROUND_LIGHT, TEXT_LIGHT, BACKGROUND_DARK
 
 def main(page: ft.Page):
     page.fonts = {
         "Lexend": "https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;700;900&display=swap"
     }
     page.title = "To Remember"
+    page.vertical_alignment = ft.MainAxisAlignment.CENTER
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+    page.window_width = 400
+    page.window_height = 850
+    page.window_resizable = True
+
+    page.theme_mode = ft.ThemeMode.LIGHT 
+    page.theme = ft.Theme(
+        color_scheme_seed=PRIMARY, 
+        font_family="Lexend",
+        color_scheme=ft.ColorScheme(
+            primary=PRIMARY,
+            background=BACKGROUND_LIGHT,
+            on_background=TEXT_LIGHT, 
+            on_surface_variant=ft.Colors.GREY_200, 
+        )
+    )
     
     def route_change(route):
         page.views.clear()
