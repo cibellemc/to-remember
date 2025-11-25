@@ -16,59 +16,34 @@ class SelectRoleView(ft.View):
             role_name="patient",
             title="Paciente",
             subtitle="A pessoa que vai treinar a memória",
-            icon_control=ft.Icon(
-                ft.Icons.ELDERLY, 
-                size=60, 
-                color=PRIMARY 
-            )
+            icon_control=ft.Icon(ft.Icons.ELDERLY, size=60, color=PRIMARY)
         )
         
         self.caregiver_card = self.create_role_card(
             role_name="caregiver",
             title="Cuidador",
             subtitle="Alguém que ajuda outra pessoa",
-            icon_control=ft.Icon(
-                ft.Icons.HEALTH_AND_SAFETY_OUTLINED, 
-                size=60, 
-                color=PRIMARY
-            )
+            icon_control=ft.Icon(ft.Icons.HEALTH_AND_SAFETY_OUTLINED, size=60, color=PRIMARY)
         )
 
         header_block = ft.Column(
             [
-                ft.Text(
-                    value="Selecione o seu perfil",
-                    size=24,
-                    weight=ft.FontWeight.BOLD,
-                    text_align=ft.TextAlign.CENTER,
-                    color=TEXT_LIGHT, 
-                ),
-                ft.Text(
-                    value="Quem vai usar este aplicativo?",
-                    size=16,
-                    text_align=ft.TextAlign.CENTER,
-                    color=TEXT_MUTED, 
-                ),
+                ft.Text("Selecione o seu perfil", size=24, weight=ft.FontWeight.BOLD, color=TEXT_LIGHT, text_align=ft.TextAlign.CENTER),
+                ft.Text("Quem vai usar este aplicativo?", size=16, color=TEXT_MUTED, text_align=ft.TextAlign.CENTER),
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=5
         )
 
         cards_row = ft.Row(
-            [
-                self.patient_card,
-                self.caregiver_card,
-            ],
+            [self.patient_card, self.caregiver_card],
             alignment=ft.MainAxisAlignment.CENTER,
             spacing=20,
         )
 
         main_content = ft.Container(
             content=ft.Column(
-                [
-                    header_block,
-                    cards_row,
-                ],
+                [header_block, cards_row],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,
                 spacing=30, 
@@ -77,13 +52,14 @@ class SelectRoleView(ft.View):
             expand=True,
         )
 
-
         self.continue_button = ActionButton( 
             text="Continuar",
             on_click=self.go_to_login
         )
         
-        self.continue_button.visible = False
+        self.continue_button.content.disabled = True 
+        
+        self.continue_button.opacity = 0.5 
 
         self.controls = [
             ft.Column(
@@ -98,49 +74,26 @@ class SelectRoleView(ft.View):
         ]
 
     def create_role_card(self, role_name: str, title: str, subtitle: str, icon_control: ft.Icon):
+        title_text = ft.Text(title, size=20, weight=ft.FontWeight.BOLD, color=TEXT_LIGHT)
+        subtitle_text = ft.Text(subtitle, size=14, color=TEXT_MUTED, text_align=ft.TextAlign.CENTER)
         
-        # Cria os controles de texto
-        title_text = ft.Text(
-            title, 
-            size=20, 
-            weight=ft.FontWeight.BOLD, 
-            color=TEXT_LIGHT 
-        )
-        
-        subtitle_text = ft.Text(
-            subtitle, 
-            size=14, 
-            color=TEXT_MUTED, 
-            text_align=ft.TextAlign.CENTER
-        )
-        
-        # Cria o card (Container)
         card = ft.Container(
             content=ft.Column(
-                [
-                    icon_control,
-                    title_text,
-                    subtitle_text
-                ],
+                [icon_control, title_text, subtitle_text],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,
                 spacing=10,
             ),
-            width=160,  
-            height=200, 
-            border_radius=12,
-            
+            width=160, height=200, border_radius=12,
             bgcolor=ft.Colors.WHITE, 
             border=ft.border.all(2, ft.Colors.GREY_300), 
             on_click=lambda e: self.select_role(role_name),
             data=role_name,
             padding=ft.padding.all(15),
         )
-        
         card.icon_control = icon_control
         card.title_text = title_text
         card.subtitle_text = subtitle_text
-        
         return card
 
     def select_role(self, role: str):
@@ -158,21 +111,18 @@ class SelectRoleView(ft.View):
         self.caregiver_card.title_text.color = TEXT_LIGHT
         self.caregiver_card.subtitle_text.color = TEXT_MUTED
 
-        selected_card = None
-        if role == "patient":
-            selected_card = self.patient_card
-        else:
-            selected_card = self.caregiver_card
-            
+        selected_card = self.patient_card if role == "patient" else self.caregiver_card
         selected_card.bgcolor = PRIMARY 
         selected_card.border = ft.border.all(4, ft.Colors.WHITE)
-        
         selected_card.icon_control.color = ft.Colors.WHITE
         selected_card.title_text.color = ft.Colors.WHITE
         selected_card.subtitle_text.color = ft.Colors.WHITE
             
-
-        self.continue_button.visible = True
+        # Habilita o botão
+        self.continue_button.content.disabled = False # Destrava o clique
+        self.continue_button.opacity = 1.0 # Volta a opacidade total
+        self.continue_button.update() # Atualiza visualmente o botão
+        
         self.update() 
 
     def go_to_login(self, e):
