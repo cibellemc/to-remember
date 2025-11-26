@@ -112,23 +112,55 @@ class LoginView(ft.View):
         ]
 
     def handle_login(self, e):
+        # 1. Travar botão para evitar múltiplos cliques (UX)
+        # Você precisaria transformar login_button em self.login_button no __init__ para isso
+        # self.login_button.content.disabled = True
+        # self.login_button.update()
+
         email = self.email_field.value
         password = self.password_field.value
+
         if not email or not password:
-            self.page.show_snack_bar(
+            self.page.open(
                 ft.SnackBar(
                     ft.Text("Por favor, preencha todos os campos.", color=ft.Colors.WHITE),
                     bgcolor=ft.Colors.RED_500,
                 )
             )
-            self.page.snack_bar.open = True
-            self.page.update()
             return
 
-        print(f"Login para {self.role} com E-mail: {email}")
-        # self.auth_service.login(email, password, self.role)
-        # self.page.go(f"/dashboard/{self.role.lower()}")
+        try:
+            # 3. Chamada ao Serviço (Supabase)
+            print(f"Tentando logar {email}...")
+            
+            # Chama o método que criamos no passo 2
+            # O 'self.auth_service' foi passado no __init__ da View
+            session = self.auth_service.login(email, password)
+            
+            # Se não deu erro, sucesso!
+            print(f"Login sucesso! User ID: {session.user.id}")
+            
+            # Opcional: Salvar token na sessão do cliente do Flet
+            self.page.client_storage.set("auth_token", session.session.access_token)
+            
+            # 4. Redirecionamento
+            self.page.go(f"/dashboard/{self.role.lower()}")
 
+        except Exception as error:
+            # 5. Tratamento de Erro (Senha errada, usuário não encontrado)
+            print(f"Erro no login: {error}")
+            self.page.open(
+                ft.SnackBar(
+                    # Exibe a mensagem de erro vinda do AuthService
+                    content=ft.Text(str(error), color=ft.Colors.WHITE),
+                    bgcolor=ft.Colors.RED_500,
+                )
+            )
+        # finally:
+            # Destravar botão se você travou no passo 1
+            # self.login_button.content.disabled = False
+            # self.login_button.update()
+            
     def go_back_to_select_role(self, e):
         self.page.go("/select-role")
 

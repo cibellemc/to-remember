@@ -8,7 +8,9 @@ authors = [
     { name = "Cibelle Maciel", email = "cibellemcl@gmail.com" }
 ]
 dependencies = [
-  "flet==0.28.3"
+  "flet==0.28.3",
+  "python-dotenv>=1.2.1",
+  "supabase>=2.24.0",
 ]
 
 [tool.flet]

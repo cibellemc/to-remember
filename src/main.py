@@ -1,6 +1,7 @@
 import flet as ft
 
 # 1. Importe todas as suas "telas" (Views)
+from app.services.auth_service import AuthService
 from presentation.views.welcome_view import WelcomeView
 from presentation.views.select_role_view import SelectRoleView
 from presentation.views.login_view import LoginView
@@ -31,6 +32,8 @@ def main(page: ft.Page):
         )
     )
     
+    auth_service = AuthService()
+    
     def route_change(route):
         page.views.clear()
 
@@ -51,7 +54,7 @@ def main(page: ft.Page):
             role = page.route.split("/")[-1]
             page.views.append(SelectRoleView(page)) # Adiciona a tela anterior
             page.views.append(
-                LoginView(page, role, auth_service=None) # Passa o perfil para a View
+                LoginView(page, role, auth_service) # Passa o perfil para a View
             )
 
         # 4. Rota: /register/[perfil] (Tela de Cadastro)
