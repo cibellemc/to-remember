@@ -61,9 +61,9 @@ def main(page: ft.Page):
         elif page.route.startswith("/register/"):
             role = page.route.split("/")[-1]
             page.views.append(SelectRoleView(page)) # Adiciona a tela base
-            page.views.append(LoginView(page, role, auth_service=None)) # Adiciona o login
+            page.views.append(LoginView(page, role, auth_service)) # Adiciona o login
             page.views.append(
-                RegisterView(page, role, auth_service=None) # Adiciona o cadastro no topo
+                RegisterView(page, role, auth_service) # Adiciona o cadastro no topo
             )
 
         # 5. Rota: /dashboard/[perfil] (Tela Inicial - Pós-Login)

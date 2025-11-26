@@ -19,22 +19,22 @@ class AuthService:
         except Exception as e:
             raise Exception(f"Erro ao entrar: {str(e)}")
 
-    # def register(self, name: str, email: str, password: str, role: str):
-    #     try:
+    def register(self, name: str, email: str, password: str, role: str):
+        try:
             
-    #         response = self.supabase.auth.sign_up({
-    #             "email": email,
-    #             "password": password,
-    #             "options": {
-    #                 "data": {
-    #                     "full_name": name,
-    #                     "role": role # Salva se é 'patient' ou 'caregiver'
-    #                 }
-    #             }
-    #         })
-    #         return response
-    #     except Exception as e:
-    #         raise Exception(f"Erro ao cadastrar: {str(e)}")
+            response = self.supabase.auth.sign_up({
+                "email": email,
+                "password": password,
+                "options": {
+                    "data": {
+                        "full_name": name,
+                        "role": role # Salva se é 'patient' ou 'caregiver'
+                    }
+                }
+            })
+            return response
+        except Exception as e:
+            raise Exception(f"Erro ao cadastrar: {str(e)}")
 
     def sign_out(self):
         self.supabase.auth.sign_out()

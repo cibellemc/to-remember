@@ -124,34 +124,67 @@ class RegisterView(ft.View):
         ]
 
     def handle_register(self, e):
-        # Lógica de validação de campos
+        # 1. Validação de campos vazios
         if not all([self.fullname_field.value, self.email_field.value, 
                     self.password_field.value, self.confirm_password_field.value]):
-            self.page.show_snack_bar(
+            self.page.open(
                 ft.SnackBar(
-                    ft.Text("Por favor, preencha todos os campos.", color=ft.colors.WHITE),
+                    ft.Text("Por favor, preencha todos os campos.", color=ft.Colors.WHITE),
                     bgcolor=ft.Colors.RED_500,
                 )
             )
-            self.page.snack_bar.open = True
-            self.page.update()
             return
         
+        # 2. Validação de senhas iguais
         if self.password_field.value != self.confirm_password_field.value:
-            self.page.show_snack_bar(
+            self.page.open(
                 ft.SnackBar(
                     ft.Text("As senhas não coincidem.", color=ft.Colors.WHITE),
                     bgcolor=ft.Colors.RED_500,
                 )
             )
-            self.page.snack_bar.open = True
-            self.page.update()
             return
 
-        print("Simulando cadastro...")
-        # self.auth_service.register(self.fullname_field.value, self.email_field.value, 
-        #                           self.password_field.value, self.role)
-        self.page.go(f"/dashboard/{self.role}")
+        # 3. Integração com Supabase
+        try:
+            # Trava o botão para evitar múltiplos cliques
+            self.continue_button.content.disabled = True
+            self.continue_button.update()
+            
+            print(f"Cadastrando {self.email_field.value} como {self.role}...")
+            
+            # Chama o serviço que criamos acima
+            self.auth_service.register(
+                name=self.fullname_field.value,
+                email=self.email_field.value,
+                password=self.password_field.value,
+                role=self.role
+            )
+            
+            # 4. Sucesso!
+            self.page.open(
+                ft.SnackBar(
+                    content=ft.Text("Cadastro realizado com sucesso! Faça login.", color=ft.Colors.WHITE),
+                    bgcolor=ft.Colors.GREEN_500
+                )
+            )
+            
+            # Redireciona para a tela de Login para a pessoa entrar
+            self.page.go(f"/login/{self.role}")
 
+        except Exception as error:
+            # 5. Erro
+            print(f"Erro ao registrar: {error}")
+            self.page.open(
+                ft.SnackBar(
+                    content=ft.Text(str(error), color=ft.Colors.WHITE),
+                    bgcolor=ft.Colors.RED_500,
+                )
+            )
+        finally:
+            # Destrava o botão (caso tenha dado erro)
+            self.continue_button.content.disabled = False
+            self.continue_button.update()
+            
     def go_back_to_login(self, e):
         self.page.go(f"/login/{self.role}")
