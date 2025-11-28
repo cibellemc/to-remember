@@ -1,13 +1,14 @@
 import flet as ft
 
-# Imports
+# 1. Importe todas as suas Views
 from presentation.views.register_specifics_view import RegisterSpecificsView
 from presentation.views.welcome_view import WelcomeView
 from presentation.views.select_role_view import SelectRoleView
 from presentation.views.login_view import LoginView
 from presentation.views.register_view import RegisterView
-from presentation.views.dashboard_view import DashboardView 
+from presentation.views.dashboard_view import DashboardView # <--- IMPORTANTE
 
+# 2. Importe o AuthService e as Cores
 from app.services.auth_service import AuthService
 from common.colors import PRIMARY, BACKGROUND_LIGHT, TEXT_LIGHT
 
@@ -36,30 +37,31 @@ def main(page: ft.Page):
         )
     )
 
+    # --- 3. Inicializa o AuthService ---
     auth_service = AuthService()
 
     def route_change(route):
         page.views.clear()
 
-        # Rota: /welcome (Tela de Introdução)
-        if page.route == "/welcome":
-             page.views.append(WelcomeView(page))
-
-        # Rota: /login (Tela de Login)
-        elif page.route == "/login":
+        # Rota 1: Login Genérico (Agora é a Home se já viu welcome)
+        if page.route == "/" or page.route == "/login":
              page.views.append(LoginView(page, auth_service))
 
-        # Rota: /select-role (Passo 1 do Cadastro)
+        # Rota 2: Welcome (Se for primeira vez, controlado pela lógica no final do arquivo)
+        elif page.route == "/welcome":
+             page.views.append(WelcomeView(page))
+
+        # Rota 3: Seleção de Perfil
         elif page.route == "/select-role":
             page.views.append(SelectRoleView(page))
 
-        # Rota: Cadastro Passo 2
+        # Rota 4: Cadastro Passo 2
         elif page.route.startswith("/register/") and "step3" not in page.route:
             role = page.route.split("/")[-1]
             if "step2" in role: role = page.route.split("/")[-1] 
             page.views.append(RegisterView(page, role, auth_service))
 
-        # Rota: Cadastro Passo 3
+        # Rota 5: Cadastro Passo 3
         elif page.route.startswith("/register/step3/"):
             role = page.route.split("/")[-1]
             basic_data = page.session.get("temp_register_data")
@@ -68,11 +70,13 @@ def main(page: ft.Page):
             else:
                 page.go("/login")
 
-        # Rota: Dashboard
+        # Rota 6: Dashboard (CORREÇÃO DA TELA BRANCA AQUI)
         elif page.route.startswith("/dashboard/"):
             role = page.route.split("/")[-1]
-            # page.views.append(DashboardView(page, role))
-            pass
+            # Removemos o 'pass' e adicionamos a view
+            page.views.append(
+                DashboardView(page, role)
+            )
 
         page.update()
 
@@ -84,8 +88,7 @@ def main(page: ft.Page):
     page.on_route_change = route_change
     page.on_view_pop = view_pop
     
-    # --- LÓGICA DE INICIALIZAÇÃO ---
-    # Verifica se é a primeira vez do usuário
+    # --- Lógica de Inicialização ---
     if page.client_storage.contains_key("welcome_seen"):
         page.go("/login")
     else:
