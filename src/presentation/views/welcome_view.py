@@ -5,11 +5,12 @@ from presentation.components.action_button import ActionButton
 class WelcomeView(ft.View):
     def __init__(self, page: ft.Page):
         super().__init__(
-            route="/",
-            bgcolor=BACKGROUND_LIGHT, 
+            route="/welcome", # Rota explícita
+            bgcolor=BACKGROUND_LIGHT,
         )
         self.page = page
 
+        # --- Bloco de Texto ---
         text_block = ft.Container(
             content=ft.Column(
                 [
@@ -18,13 +19,13 @@ class WelcomeView(ft.View):
                         size=32,
                         weight=ft.FontWeight.BOLD,
                         text_align=ft.TextAlign.CENTER,
-                        color=TEXT_LIGHT, 
+                        color=TEXT_LIGHT,
                     ),
                     ft.Text(
                         value="Um aplicativo projetado para estimular a mente e acompanhar seu desempenho.",
                         size=16,
                         text_align=ft.TextAlign.CENTER,
-                        color=TEXT_SUBTLE, 
+                        color=TEXT_SUBTLE,
                     ),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -36,9 +37,10 @@ class WelcomeView(ft.View):
             padding=ft.padding.symmetric(horizontal=40), 
         )
 
-        start_button = ActionButton( 
+        # --- Botão Começar ---
+        start_button = ActionButton(
             text="Começar",
-            on_click=self.go_to_select_role
+            on_click=self.finish_welcome
         )
 
         self.controls = [
@@ -52,6 +54,10 @@ class WelcomeView(ft.View):
             )
         ]
 
-    def go_to_select_role(self, e):
-        print("Redirecionando - Tela de escolha de perfil")
-        self.page.go("/select-role")
+    def finish_welcome(self, e):
+        # 1. Marca no armazenamento local que o usuário já viu a intro
+        self.page.client_storage.set("welcome_seen", True)
+        
+        # 2. Vai para a tela de Login
+        print("Intro finalizada. Indo para Login.")
+        self.page.go("/login")

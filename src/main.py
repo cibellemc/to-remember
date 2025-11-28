@@ -1,15 +1,18 @@
 import flet as ft
 
-# 1. Importe todas as suas "telas" (Views)
-from app.services.auth_service import AuthService
+# Imports
+from presentation.views.register_specifics_view import RegisterSpecificsView
 from presentation.views.welcome_view import WelcomeView
 from presentation.views.select_role_view import SelectRoleView
 from presentation.views.login_view import LoginView
 from presentation.views.register_view import RegisterView
-from presentation.views.dashboard_view import DashboardView
-from common.colors import PRIMARY, BACKGROUND_LIGHT, TEXT_LIGHT, BACKGROUND_DARK
+from presentation.views.dashboard_view import DashboardView 
+
+from app.services.auth_service import AuthService
+from common.colors import PRIMARY, BACKGROUND_LIGHT, TEXT_LIGHT
 
 def main(page: ft.Page):
+    # --- Configurações da Página ---
     page.fonts = {
         "Lexend": "https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;700;900&display=swap"
     }
@@ -20,6 +23,7 @@ def main(page: ft.Page):
     page.window_height = 850
     page.window_resizable = True
 
+    # --- Tema ---
     page.theme_mode = ft.ThemeMode.LIGHT 
     page.theme = ft.Theme(
         color_scheme_seed=PRIMARY, 
@@ -31,60 +35,60 @@ def main(page: ft.Page):
             on_surface_variant=ft.Colors.GREY_200, 
         )
     )
-    
+
     auth_service = AuthService()
-    
+
     def route_change(route):
         page.views.clear()
 
-        # 1. Rota: / (Tela de Boas-Vindas)
-        page.views.append(
-            WelcomeView(page)
-        )
+        # Rota: /welcome (Tela de Introdução)
+        if page.route == "/welcome":
+             page.views.append(WelcomeView(page))
 
-        # 2. Rota: /select-role (Seleção de Perfil)
-        if page.route == "/select-role":
-            page.views.append(
-                SelectRoleView(page)
-            )
+        # Rota: /login (Tela de Login)
+        elif page.route == "/login":
+             page.views.append(LoginView(page, auth_service))
 
-        # 3. Rota: /login/[perfil] (Tela de Login)
-        elif page.route.startswith("/login/"):
-            # Extrai o perfil (paciente ou cuidador) da URL
+        # Rota: /select-role (Passo 1 do Cadastro)
+        elif page.route == "/select-role":
+            page.views.append(SelectRoleView(page))
+
+        # Rota: Cadastro Passo 2
+        elif page.route.startswith("/register/") and "step3" not in page.route:
             role = page.route.split("/")[-1]
-            page.views.append(SelectRoleView(page)) # Adiciona a tela anterior
-            page.views.append(
-                LoginView(page, role, auth_service) # Passa o perfil para a View
-            )
+            if "step2" in role: role = page.route.split("/")[-1] 
+            page.views.append(RegisterView(page, role, auth_service))
 
-        # 4. Rota: /register/[perfil] (Tela de Cadastro)
-        elif page.route.startswith("/register/"):
+        # Rota: Cadastro Passo 3
+        elif page.route.startswith("/register/step3/"):
             role = page.route.split("/")[-1]
-            page.views.append(SelectRoleView(page)) # Adiciona a tela base
-            page.views.append(LoginView(page, role, auth_service)) # Adiciona o login
-            page.views.append(
-                RegisterView(page, role, auth_service) # Adiciona o cadastro no topo
-            )
+            basic_data = page.session.get("temp_register_data")
+            if basic_data:
+                page.views.append(RegisterSpecificsView(page, role, basic_data, auth_service))
+            else:
+                page.go("/login")
 
-        # 5. Rota: /dashboard/[perfil] (Tela Inicial - Pós-Login)
+        # Rota: Dashboard
         elif page.route.startswith("/dashboard/"):
             role = page.route.split("/")[-1]
-            page.views.append(
-                DashboardView(page, role)
-            )
+            # page.views.append(DashboardView(page, role))
+            pass
 
         page.update()
 
     def view_pop(view):
-        if page.views:
-            top_view = page.views[-1]
-            page.go(top_view.route)
-        else:
-            page.go("/") 
+        page.views.pop()
+        top_view = page.views[-1]
+        page.go(top_view.route)
 
     page.on_route_change = route_change
     page.on_view_pop = view_pop
     
-    page.go("/") 
+    # --- LÓGICA DE INICIALIZAÇÃO ---
+    # Verifica se é a primeira vez do usuário
+    if page.client_storage.contains_key("welcome_seen"):
+        page.go("/login")
+    else:
+        page.go("/welcome")
 
 ft.app(target=main)

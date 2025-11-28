@@ -12,6 +12,23 @@ class SelectRoleView(ft.View):
         self.page = page
         self.selected_role = None 
 
+        # --- AppBar (Header do Passo a Passo) ---
+        self.appbar = ft.AppBar(
+            title=ft.Column([
+                ft.Text("Seleção de Perfil", color=TEXT_LIGHT, size=18, weight=ft.FontWeight.BOLD),
+                ft.Text("Passo 1 de 3", color=TEXT_MUTED, size=12),
+            ], spacing=0, alignment=ft.MainAxisAlignment.CENTER),
+            center_title=True,
+            leading=ft.IconButton(
+                icon=ft.Icons.ARROW_BACK,
+                on_click=self.go_back_to_login, # Volta pro Login (cancelar cadastro)
+                icon_color=TEXT_LIGHT
+            ),
+            bgcolor=ft.Colors.WHITE,
+            elevation=0
+        )
+
+        # --- Cards (Lógica Visual) ---
         self.patient_card = self.create_role_card(
             role_name="patient",
             title="Paciente",
@@ -26,13 +43,12 @@ class SelectRoleView(ft.View):
             icon_control=ft.Icon(ft.Icons.HEALTH_AND_SAFETY_OUTLINED, size=60, color=PRIMARY)
         )
 
-        header_block = ft.Column(
-            [
-                ft.Text("Selecione o seu perfil", size=24, weight=ft.FontWeight.BOLD, color=TEXT_LIGHT, text_align=ft.TextAlign.CENTER),
-                ft.Text("Quem vai usar este aplicativo?", size=16, color=TEXT_MUTED, text_align=ft.TextAlign.CENTER),
-            ],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=5
+        # Texto de Apoio
+        header_text = ft.Text(
+            value="Quem vai usar este aplicativo?",
+            size=18,
+            text_align=ft.TextAlign.CENTER,
+            color=TEXT_MUTED, 
         )
 
         cards_row = ft.Row(
@@ -43,7 +59,7 @@ class SelectRoleView(ft.View):
 
         main_content = ft.Container(
             content=ft.Column(
-                [header_block, cards_row],
+                [header_text, cards_row],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,
                 spacing=30, 
@@ -52,13 +68,14 @@ class SelectRoleView(ft.View):
             expand=True,
         )
 
+        # Botão Continuar
         self.continue_button = ActionButton( 
             text="Continuar",
-            on_click=self.go_to_login
+            on_click=self.go_to_step_2
         )
         
+        # Inicia desabilitado visualmente
         self.continue_button.content.disabled = True 
-        
         self.continue_button.opacity = 0.5 
 
         self.controls = [
@@ -74,6 +91,7 @@ class SelectRoleView(ft.View):
         ]
 
     def create_role_card(self, role_name: str, title: str, subtitle: str, icon_control: ft.Icon):
+        # ... (Mantém a mesma lógica de criação visual do card) ...
         title_text = ft.Text(title, size=20, weight=ft.FontWeight.BOLD, color=TEXT_LIGHT)
         subtitle_text = ft.Text(subtitle, size=14, color=TEXT_MUTED, text_align=ft.TextAlign.CENTER)
         
@@ -99,32 +117,32 @@ class SelectRoleView(ft.View):
     def select_role(self, role: str):
         self.selected_role = role
         
-        self.patient_card.bgcolor = ft.Colors.WHITE
-        self.patient_card.border = ft.border.all(2, ft.Colors.GREY_300)
-        self.patient_card.icon_control.color = PRIMARY
-        self.patient_card.title_text.color = TEXT_LIGHT
-        self.patient_card.subtitle_text.color = TEXT_MUTED
-        
-        self.caregiver_card.bgcolor = ft.Colors.WHITE
-        self.caregiver_card.border = ft.border.all(2, ft.Colors.GREY_300)
-        self.caregiver_card.icon_control.color = PRIMARY
-        self.caregiver_card.title_text.color = TEXT_LIGHT
-        self.caregiver_card.subtitle_text.color = TEXT_MUTED
+        # Reset visual
+        for card in [self.patient_card, self.caregiver_card]:
+            card.bgcolor = ft.Colors.WHITE
+            card.border = ft.border.all(2, ft.Colors.GREY_300)
+            card.icon_control.color = PRIMARY
+            card.title_text.color = TEXT_LIGHT
+            card.subtitle_text.color = TEXT_MUTED
 
-        selected_card = self.patient_card if role == "patient" else self.caregiver_card
-        selected_card.bgcolor = PRIMARY 
-        selected_card.border = ft.border.all(4, ft.Colors.WHITE)
-        selected_card.icon_control.color = ft.Colors.WHITE
-        selected_card.title_text.color = ft.Colors.WHITE
-        selected_card.subtitle_text.color = ft.Colors.WHITE
+        # Destaque selecionado
+        selected = self.patient_card if role == "patient" else self.caregiver_card
+        selected.bgcolor = PRIMARY 
+        selected.border = ft.border.all(4, ft.Colors.WHITE)
+        selected.icon_control.color = ft.Colors.WHITE
+        selected.title_text.color = ft.Colors.WHITE
+        selected.subtitle_text.color = ft.Colors.WHITE
             
-        # Habilita o botão
-        self.continue_button.content.disabled = False # Destrava o clique
-        self.continue_button.opacity = 1.0 # Volta a opacidade total
-        self.continue_button.update() # Atualiza visualmente o botão
-        
+        # Habilita botão
+        self.continue_button.content.disabled = False
+        self.continue_button.opacity = 1.0 
+        self.continue_button.update() 
         self.update() 
 
-    def go_to_login(self, e):
+    def go_to_step_2(self, e):
         if self.selected_role:
-            self.page.go(f"/login/{self.selected_role}")
+            # Vai para a RegisterView (Passo 2)
+            self.page.go(f"/register/{self.selected_role}")
+
+    def go_back_to_login(self, e):
+        self.page.go("/login")

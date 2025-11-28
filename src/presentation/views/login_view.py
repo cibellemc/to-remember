@@ -1,171 +1,111 @@
 import flet as ft
-# Imports ajustados para as novas cores
 from common.colors import BACKGROUND_LIGHT, TEXT_LIGHT, TEXT_MUTED, PRIMARY
 from presentation.components.action_button import ActionButton
 
 class LoginView(ft.View):
-    def __init__(self, page: ft.Page, role: str, auth_service):
+    def __init__(self, page: ft.Page, auth_service):
         super().__init__(
-            route=f"/login/{role}",
-            bgcolor=BACKGROUND_LIGHT, # Fundo claro
+            route="/login", # Rota genérica agora
+            bgcolor=BACKGROUND_LIGHT,
         )
         self.page = page
-        self.role = role.capitalize()
         self.auth_service = auth_service 
 
-        # --- AppBar Consistente (Fundo branco, texto escuro) ---
+        # AppBar simples
         self.appbar = ft.AppBar(
-            title=ft.Text(f"Login de {self.role}", color=TEXT_LIGHT), # Texto escuro
-            leading=ft.IconButton(
-                icon=ft.Icons.ARROW_BACK,
-                on_click=self.go_back_to_select_role,
-                icon_color=TEXT_LIGHT # Ícone escuro
-            ),
-            bgcolor=ft.Colors.WHITE, # Fundo branco para a AppBar
-            elevation=1 # Uma sombra leve para destacar
+            title=ft.Text("Login", color=TEXT_LIGHT),
+            bgcolor=ft.Colors.WHITE,
+            elevation=0,
+            center_title=True,
+            automatically_imply_leading=False # Sem seta de voltar na tela inicial
         )
 
-        # --- Campos de Texto (estilo M3 com "label") ---
         self.email_field = ft.TextField(
             label="E-mail",
             keyboard_type=ft.KeyboardType.EMAIL,
-            autofill_hints=ft.AutofillHint.USERNAME,
-            label_style=ft.TextStyle(color=TEXT_MUTED), # Cor do label
-            text_style=ft.TextStyle(color=TEXT_LIGHT), # Cor do texto digitado
-            border_color=ft.Colors.GREY_300, # Borda em repouso
-            focused_border_color=PRIMARY, # Borda focada
+            label_style=ft.TextStyle(color=TEXT_MUTED),
+            border_color=ft.Colors.GREY_300,
+            focused_border_color=PRIMARY,
+            text_style=ft.TextStyle(color=TEXT_LIGHT),
         )
         self.password_field = ft.TextField(
             label="Senha",
             password=True,
             can_reveal_password=True,
-            autofill_hints=ft.AutofillHint.PASSWORD,
             label_style=ft.TextStyle(color=TEXT_MUTED),
-            text_style=ft.TextStyle(color=TEXT_LIGHT),
             border_color=ft.Colors.GREY_300,
             focused_border_color=PRIMARY,
+            text_style=ft.TextStyle(color=TEXT_LIGHT),
         )
         
-        # Link "Esqueceu a senha"
-        forgot_password_link = ft.TextButton(
-            "Esqueceu sua senha?",
-            on_click=self.forgot_password,
-            style=ft.ButtonStyle(color=TEXT_MUTED) # Cor do texto do link
-        )
-        
-        # Botão de Ação (padrão)
         login_button = ActionButton(
             text="Entrar",
             on_click=self.handle_login
         )
         login_button.padding = ft.padding.symmetric(horizontal=40)
         
-        # Link de Cadastro
+        # O botão de cadastro agora leva para a seleção de perfil
         signup_link = ft.Row(
             [
                 ft.Text("Não tem uma conta?", color=TEXT_MUTED),
                 ft.TextButton(
                     "Cadastre-se", 
-                    on_click=self.go_to_register,
-                    style=ft.ButtonStyle(color=PRIMARY) # Cor do link
+                    on_click=self.go_to_select_role,
+                    style=ft.ButtonStyle(color=PRIMARY)
                 ),
             ],
             alignment=ft.MainAxisAlignment.CENTER,
         )
         
-        # --- Layout Consistente (Coluna Única Rolável) ---
         self.controls = [
             ft.Container(
                 content=ft.Column(
                     [
+                        ft.Image(src="assets/icon.png", width=100, height=100) if False else ft.Icon(ft.Icons.LOCK_PERSON, size=80, color=PRIMARY), # Placeholder logo
                         ft.Text(
-                            f"Acesse sua conta de\n{self.role}",
+                            "Bem-vindo de volta",
                             size=24,
                             weight=ft.FontWeight.BOLD,
-                            text_align=ft.TextAlign.CENTER,
-                            color=TEXT_LIGHT, # Texto escuro
+                            color=TEXT_LIGHT,
                         ),
-                        ft.AutofillGroup(
-                            content=ft.Column(
-                                [
-                                    self.email_field,
-                                    self.password_field,
-                                ],
-                                spacing=20 # Mais espaço entre os campos
-                            )
-                        ),
-                        ft.Row(
-                            [forgot_password_link], 
-                            alignment=ft.MainAxisAlignment.END
-                        ),
-                        ft.Container(height=20), # Espaçador maior
+                        ft.Container(height=20),
+                        self.email_field,
+                        self.password_field,
+                        ft.Container(height=20),
                         login_button,
                         signup_link,
                     ],
-                    spacing=30, # Mais espaço entre blocos
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=20,
                     scroll=ft.ScrollMode.ADAPTIVE,
                 ),
-                padding=ft.padding.all(30), # Padding maior para a tela toda
+                padding=ft.padding.all(30),
                 expand=True,
+                alignment=ft.alignment.center
             )
         ]
 
     def handle_login(self, e):
-        # 1. Travar botão para evitar múltiplos cliques (UX)
-        # Você precisaria transformar login_button em self.login_button no __init__ para isso
-        # self.login_button.content.disabled = True
-        # self.login_button.update()
-
         email = self.email_field.value
         password = self.password_field.value
-
+        
         if not email or not password:
-            self.page.open(
-                ft.SnackBar(
-                    ft.Text("Por favor, preencha todos os campos.", color=ft.Colors.WHITE),
-                    bgcolor=ft.Colors.RED_500,
-                )
-            )
+            self.page.open(ft.SnackBar(ft.Text("Preencha todos os campos"), bgcolor=ft.Colors.RED))
+ 
             return
 
         try:
-            # 3. Chamada ao Serviço (Supabase)
-            print(f"Tentando logar {email}...")
-            
-            # Chama o método que criamos no passo 2
-            # O 'self.auth_service' foi passado no __init__ da View
+            self.page.open(ft.SnackBar(ft.Text("Entrando..."), bgcolor=ft.Colors.BLUE))
             session = self.auth_service.login(email, password)
             
-            # Se não deu erro, sucesso!
-            print(f"Login sucesso! User ID: {session.user.id}")
+            # Descobre qual o perfil do usuário (salvo no metadata)
+            user_role = session.user.user_metadata.get('role', 'patient') # Default patient se não achar
             
-            # Opcional: Salvar token na sessão do cliente do Flet
-            self.page.client_storage.set("auth_token", session.session.access_token)
-            
-            # 4. Redirecionamento
-            self.page.go(f"/dashboard/{self.role.lower()}")
+            self.page.go(f"/dashboard/{user_role}")
 
         except Exception as error:
-            # 5. Tratamento de Erro (Senha errada, usuário não encontrado)
-            print(f"Erro no login: {error}")
-            self.page.open(
-                ft.SnackBar(
-                    # Exibe a mensagem de erro vinda do AuthService
-                    content=ft.Text(str(error), color=ft.Colors.WHITE),
-                    bgcolor=ft.Colors.RED_500,
-                )
-            )
-        # finally:
-            # Destravar botão se você travou no passo 1
-            # self.login_button.content.disabled = False
-            # self.login_button.update()
-            
-    def go_back_to_select_role(self, e):
+            self.page.open(ft.SnackBar(ft.Text(str(error)), bgcolor=ft.Colors.RED))
+
+    def go_to_select_role(self, e):
+        # Inicia o fluxo de cadastro
         self.page.go("/select-role")
-
-    def go_to_register(self, e):
-        self.page.go(f"/register/{self.role.lower()}") 
-
-    def forgot_password(self, e):
-        print("Ir para 'Esqueci minha senha'")

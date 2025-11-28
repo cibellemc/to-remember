@@ -1,5 +1,4 @@
 import flet as ft
-# Imports ajustados para as novas cores
 from common.colors import BACKGROUND_LIGHT, TEXT_LIGHT, TEXT_MUTED, PRIMARY
 from presentation.components.action_button import ActionButton
 
@@ -7,28 +6,34 @@ class RegisterView(ft.View):
     def __init__(self, page: ft.Page, role: str, auth_service):
         super().__init__(
             route=f"/register/{role}",
-            bgcolor=BACKGROUND_LIGHT, # Fundo claro
+            bgcolor=BACKGROUND_LIGHT,
         )
         self.page = page
         self.role = role
         self.auth_service = auth_service
         
-        title = "Paciente" if role == "patient" else "Cuidador"
+        # Limpa o "step2" do role se vier na URL
+        display_role = role.replace("step2", "").strip()
+        # Tradução simples para exibição
+        title_text = "Paciente" if display_role == "patient" else "Cuidador"
 
-        # Sua AppBar (Fundo branco, texto escuro)
+        # AppBar
         self.appbar = ft.AppBar(
-            title=ft.Text(f"Cadastro de {title}", color=TEXT_LIGHT), # Texto escuro
+            title=ft.Column([
+                ft.Text(f"Cadastro de {title_text}", color=TEXT_LIGHT, size=18, weight=ft.FontWeight.BOLD),
+                ft.Text("Passo 2 de 3", color=TEXT_MUTED, size=12),
+            ], spacing=0, alignment=ft.MainAxisAlignment.CENTER),
+            center_title=True,
             leading=ft.IconButton(
                 icon=ft.Icons.ARROW_BACK,
-                on_click=self.go_back_to_login,
-                icon_color=TEXT_LIGHT # Ícone escuro
+                on_click=self.go_back_to_step_1, # <--- CORREÇÃO AQUI
+                icon_color=TEXT_LIGHT
             ),
-            bgcolor=ft.Colors.WHITE, # Fundo branco para a AppBar
-            elevation=1 # Uma sombra leve para destacar
+            bgcolor=ft.Colors.WHITE,
+            elevation=0
         )
         
-        # Seus Campos de Texto (estilo M3 com "label")
-        # Todos os campos com as novas cores de label e texto digitado
+        # Campos
         self.fullname_field = ft.TextField(
             label="Nome Completo",
             autofill_hints=ft.AutofillHint.NAME,
@@ -72,31 +77,25 @@ class RegisterView(ft.View):
         )
         self.continue_button.padding = ft.padding.symmetric(horizontal=40)
 
-        # Link de Login
+        # Link Login (Caso a pessoa desista e já tenha conta)
         login_link = ft.Row(
             [
                 ft.Text("Já tem uma conta?", color=TEXT_MUTED),
                 ft.TextButton(
                     "Entre", 
-                    on_click=self.go_back_to_login,
-                    style=ft.ButtonStyle(color=PRIMARY) # Cor do link
+                    on_click=self.go_to_login,
+                    style=ft.ButtonStyle(color=PRIMARY)
                 ),
             ],
             alignment=ft.MainAxisAlignment.CENTER,
         )
 
-        # --- Layout Consistente (Coluna Única Rolável) ---
+        # Layout
         self.controls = [
             ft.Container(
                 content=ft.Column(
                     [
-                        ft.Text(
-                            f"Crie sua conta de {title}",
-                            size=24, 
-                            weight=ft.FontWeight.BOLD,
-                            color=TEXT_LIGHT # Texto escuro
-                        ),
-                        
+                        ft.Text("Crie sua conta", size=24, weight=ft.FontWeight.BOLD, color=TEXT_LIGHT),
                         ft.AutofillGroup(
                             content=ft.Column(
                                 [
@@ -105,26 +104,24 @@ class RegisterView(ft.View):
                                     self.password_field,
                                     self.confirm_password_field,
                                 ],
-                                spacing=20 # Mais espaço entre os campos
+                                spacing=20
                             )
                         ),
-                        
-                        ft.Container(height=20), # Espaçador maior
-                        
+                        ft.Container(height=20),
                         self.continue_button, 
                         login_link,           
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=30, # Mais espaço entre blocos
+                    spacing=30,
                     scroll=ft.ScrollMode.ADAPTIVE,
                 ),
-                padding=ft.padding.all(30), # Padding maior para a tela toda
+                padding=ft.padding.all(30),
                 expand=True,
             )
         ]
 
     def handle_register(self, e):
-        # 1. Validação de campos vazios
+        # Validação de campos vazios
         if not all([self.fullname_field.value, self.email_field.value, 
                     self.password_field.value, self.confirm_password_field.value]):
             self.page.open(
@@ -135,7 +132,7 @@ class RegisterView(ft.View):
             )
             return
         
-        # 2. Validação de senhas iguais
+        # Validação de senhas
         if self.password_field.value != self.confirm_password_field.value:
             self.page.open(
                 ft.SnackBar(
@@ -144,47 +141,25 @@ class RegisterView(ft.View):
                 )
             )
             return
+        
+        # Prepara os dados
+        basic_data = {
+            "name": self.fullname_field.value,
+            "email": self.email_field.value,
+            "password": self.password_field.value
+        }
 
-        # 3. Integração com Supabase
-        try:
-            # Trava o botão para evitar múltiplos cliques
-            self.continue_button.content.disabled = True
-            self.continue_button.update()
-            
-            print(f"Cadastrando {self.email_field.value} como {self.role}...")
-            
-            # Chama o serviço que criamos acima
-            self.auth_service.register(
-                name=self.fullname_field.value,
-                email=self.email_field.value,
-                password=self.password_field.value,
-                role=self.role
-            )
-            
-            # 4. Sucesso!
-            self.page.open(
-                ft.SnackBar(
-                    content=ft.Text("Cadastro realizado com sucesso! Faça login.", color=ft.Colors.WHITE),
-                    bgcolor=ft.Colors.GREEN_500
-                )
-            )
-            
-            # Redireciona para a tela de Login para a pessoa entrar
-            self.page.go(f"/login/{self.role}")
+        # Salva na sessão
+        self.page.session.set("temp_register_data", basic_data)
+        
+        # Navega para o passo 3
+        clean_role = self.role.replace("step2", "").strip()
+        self.page.go(f"/register/step3/{clean_role}")
 
-        except Exception as error:
-            # 5. Erro
-            print(f"Erro ao registrar: {error}")
-            self.page.open(
-                ft.SnackBar(
-                    content=ft.Text(str(error), color=ft.Colors.WHITE),
-                    bgcolor=ft.Colors.RED_500,
-                )
-            )
-        finally:
-            # Destrava o botão (caso tenha dado erro)
-            self.continue_button.content.disabled = False
-            self.continue_button.update()
-            
-    def go_back_to_login(self, e):
-        self.page.go(f"/login/{self.role}")
+    def go_back_to_step_1(self, e):
+        # Volta para a Seleção de Perfil (Passo 1)
+        self.page.go("/select-role")
+
+    def go_to_login(self, e):
+        # Vai para a tela de Login (Cancelando o fluxo)
+        self.page.go("/login")
