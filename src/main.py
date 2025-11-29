@@ -79,10 +79,9 @@ def main(page: ft.Page):
             
             # Decide qual View mostrar
             if role == "patient":
-                page.views.append(PatientDashboardView(page, user_name))
+                page.views.append(PatientDashboardView(page, user_name, auth_service))
             else:
-                page.views.append(CaregiverDashboardView(page, user_name))
-
+                page.views.append(CaregiverDashboardView(page, user_name, auth_service))
         page.update()
 
     def view_pop(view):
