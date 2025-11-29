@@ -6,7 +6,9 @@ from presentation.views.welcome_view import WelcomeView
 from presentation.views.select_role_view import SelectRoleView
 from presentation.views.login_view import LoginView
 from presentation.views.register_view import RegisterView
-from presentation.views.dashboard_view import DashboardView # <--- IMPORTANTE
+# Importe as NOVAS Views separadas
+from presentation.views.patient_dashboard_view import PatientDashboardView
+from presentation.views.caregiver_dashboard_view import CaregiverDashboardView
 
 # 2. Importe o AuthService e as Cores
 from app.services.auth_service import AuthService
@@ -43,11 +45,11 @@ def main(page: ft.Page):
     def route_change(route):
         page.views.clear()
 
-        # Rota 1: Login Genérico (Agora é a Home se já viu welcome)
+        # Rota 1: Login Genérico
         if page.route == "/" or page.route == "/login":
              page.views.append(LoginView(page, auth_service))
 
-        # Rota 2: Welcome (Se for primeira vez, controlado pela lógica no final do arquivo)
+        # Rota 2: Welcome
         elif page.route == "/welcome":
              page.views.append(WelcomeView(page))
 
@@ -70,13 +72,16 @@ def main(page: ft.Page):
             else:
                 page.go("/login")
 
-        # Rota 6: Dashboard (CORREÇÃO DA TELA BRANCA AQUI)
+        # Rota 6: Dashboard (SEPARADA)
         elif page.route.startswith("/dashboard/"):
             role = page.route.split("/")[-1]
-            # Removemos o 'pass' e adicionamos a view
-            page.views.append(
-                DashboardView(page, role)
-            )
+            user_name = page.session.get("user_name") or ""
+            
+            # Decide qual View mostrar
+            if role == "patient":
+                page.views.append(PatientDashboardView(page, user_name))
+            else:
+                page.views.append(CaregiverDashboardView(page, user_name))
 
         page.update()
 

@@ -98,9 +98,17 @@ class LoginView(ft.View):
             self.page.open(ft.SnackBar(ft.Text("Entrando..."), bgcolor=ft.Colors.BLUE))
             session = self.auth_service.login(email, password)
             
-            # Descobre qual o perfil do usuário (salvo no metadata)
-            user_role = session.user.user_metadata.get('role', 'patient') # Default patient se não achar
+            # --- CORREÇÃO: Captura dados para passar para a próxima tela ---
+            # 1. Pega o role
+            user_role = session.user.user_metadata.get('role', 'patient') 
             
+            # 2. Pega o nome completo (se existir no metadata)
+            user_name = session.user.user_metadata.get('full_name', '')
+            
+            # 3. Salva na sessão do app para persistência simples (ou passar via rota)
+            self.page.session.set("user_name", user_name)
+            
+            # 4. Vai para o dashboard
             self.page.go(f"/dashboard/{user_role}")
 
         except Exception as error:
