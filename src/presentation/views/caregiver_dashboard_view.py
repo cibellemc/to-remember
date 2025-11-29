@@ -46,6 +46,7 @@ class CaregiverDashboardView(ft.View):
             ]
         )
 
+        # --- Conteúdo das Abas ---
         self.tabs_content = [
             self._view_patients(), 
             self._view_alerts(),   
@@ -93,7 +94,6 @@ class CaregiverDashboardView(ft.View):
 
         except Exception as e:
             print(f"Erro ao carregar pacientes: {e}")
-            # Se a view não estiver montada, isso pode dar erro, então protegemos
             try: self.page.open(ft.SnackBar(ft.Text("Erro ao carregar lista."), bgcolor=ft.Colors.RED))
             except: pass
 
@@ -111,11 +111,22 @@ class CaregiverDashboardView(ft.View):
             )
         else:
             for item in self.patients_data:
-                display_name = item.get("patient_email")
+                # --- CORREÇÃO 1: Nome ou Email ---
+                # Tenta pegar 'patient_name' primeiro (você precisará salvar isso no banco ao aceitar),
+                # senão usa o email.
+                display_name = item.get("patient_name") or item.get("patient_email")
                 status = item.get("status")
                 
-                status_color = ft.Colors.ORANGE if status == 'pending' else ft.Colors.GREEN
-                status_text = "Pendente" if status == 'pending' else "Ativo"
+                # --- CORREÇÃO 2: Cores e Texto de Status ---
+                if status == 'active':
+                    status_text = "Ativo"
+                    status_color = ft.Colors.GREEN
+                elif status == 'rejected':
+                    status_text = "Recusado"
+                    status_color = ft.Colors.RED
+                else:
+                    status_text = "Pendente"
+                    status_color = ft.Colors.ORANGE
 
                 self.patients_column.controls.append(
                     self._patient_card(display_name, status_text, status_color)
@@ -126,16 +137,14 @@ class CaregiverDashboardView(ft.View):
     def change_tab(self, e):
         index = e.control.selected_index
         self.body_container.content = self.tabs_content[index]
-        self.appbar.title.value = ["Meus Pacientes", "Alertas", "Meu Perfil"][index]
+        titles = ["Meus Pacientes", "Alertas", "Meu Perfil"]
+        self.appbar.title.value = titles[index]
         self.update()
 
-    # --- CORREÇÃO: Nova forma de abrir Modal ---
     def open_add_patient_dialog(self, e):
-        # Em Flet recente, usa-se page.open(dialog)
         self.page.open(self.add_patient_dialog)
 
     def close_dialog(self, e):
-        # Em Flet recente, usa-se page.close(dialog)
         self.page.close(self.add_patient_dialog)
 
     def send_invite(self, e):
@@ -145,14 +154,11 @@ class CaregiverDashboardView(ft.View):
         try:
             user = self.auth_service.supabase.auth.get_user()
             my_id = user.user.id
-            
-            # Tenta pegar o email do user atual também, se possível
             my_email = user.user.email
 
-            # 2. Insere na tabela de links COM O NOME (se tivermos rodado o SQL)
             data = {
                 "caregiver_id": my_id,
-                "caregiver_name": self.user_name, # Salva o nome para o paciente ver
+                "caregiver_name": self.user_name,
                 "caregiver_email": my_email,
                 "patient_email": email,
                 "status": "pending",
@@ -163,6 +169,11 @@ class CaregiverDashboardView(ft.View):
 
             self.page.close(self.add_patient_dialog)
             self.page.open(ft.SnackBar(ft.Text(f"Convite enviado para {email}!"), bgcolor=ft.Colors.GREEN))
+            
+            # --- AJUSTE: Limpa o campo após enviar ---
+            self.invite_email_field.value = ""
+            self.invite_email_field.update()
+            
             self.load_patients()
 
         except Exception as error:
@@ -192,37 +203,123 @@ class CaregiverDashboardView(ft.View):
                         padding=20
                     ),
                     width=float('inf'),
-                    on_click=self.open_add_patient_dialog # Agora funciona
+                    on_click=self.open_add_patient_dialog 
                 )
             ],
             scroll=ft.ScrollMode.ADAPTIVE
         )
 
-    # ... (O resto do arquivo _view_alerts, _view_profile, _patient_card etc. mantém igual)
     def _view_alerts(self):
-        return ft.Column([self._alert_tile("Sem alertas", ft.Icons.CHECK, ft.Colors.GREEN)], scroll=ft.ScrollMode.ADAPTIVE)
+        return ft.Column(
+            [
+                ft.Text("Atividades Recentes", size=20, weight=ft.FontWeight.BOLD, color=TEXT_LIGHT),
+                ft.Container(height=10),
+                self._alert_tile("Sem alertas recentes", ft.Icons.CHECK_CIRCLE, ft.Colors.GREEN),
+            ],
+            scroll=ft.ScrollMode.ADAPTIVE
+        )
 
+    # --- AJUSTE: Perfil Completo ---
     def _view_profile(self):
-        return ft.Column([ft.Text("Perfil")], scroll=ft.ScrollMode.ADAPTIVE) # Simplificado para caber, mantenha o seu
+        return ft.Column(
+            [
+                ft.Container(
+                    alignment=ft.alignment.center,
+                    content=ft.Column([
+                        ft.CircleAvatar(
+                            radius=50, 
+                            bgcolor=ft.Colors.BLUE_50,
+                            content=ft.Icon(ft.Icons.PERSON, size=50, color=PRIMARY)
+                        ),
+                        ft.Container(height=10),
+                        ft.Text(self.user_name, size=22, weight=ft.FontWeight.BOLD, color=TEXT_LIGHT),
+                        ft.Text("Cuidador", color=TEXT_MUTED),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+                ),
+                ft.Container(height=30),
+                
+                # Lista de Opções
+                ft.Container(
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=12,
+                    padding=10,
+                    content=ft.Column([
+                        ft.ListTile(
+                            leading=ft.Icon(ft.Icons.PERSON_OUTLINE, color=PRIMARY), 
+                            title=ft.Text("Meus Dados", color=TEXT_LIGHT),
+                            trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT, color=TEXT_MUTED)
+                        ),
+                        ft.Divider(height=1, color=ft.Colors.GREY_100),
+                        ft.ListTile(
+                            leading=ft.Icon(ft.Icons.SETTINGS_OUTLINED, color=PRIMARY), 
+                            title=ft.Text("Configurações", color=TEXT_LIGHT),
+                            trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT, color=TEXT_MUTED)
+                        ),
+                        ft.Divider(height=1, color=ft.Colors.GREY_100),
+                        ft.ListTile(
+                            leading=ft.Icon(ft.Icons.HELP_OUTLINE, color=PRIMARY), 
+                            title=ft.Text("Ajuda e Suporte", color=TEXT_LIGHT),
+                            trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT, color=TEXT_MUTED)
+                        ),
+                    ])
+                ),
+                
+                ft.Container(height=20),
+                
+                ft.Container(
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=12,
+                    padding=10,
+                    content=ft.ListTile(
+                        leading=ft.Icon(ft.Icons.LOGOUT, color=ft.Colors.RED), 
+                        title=ft.Text("Sair da Conta", color=ft.Colors.RED), 
+                        on_click=self.logout
+                    )
+                ),
+            ],
+            scroll=ft.ScrollMode.ADAPTIVE
+        )
 
     def _patient_card(self, name, status_text, status_color):
         return ft.Container(
-            padding=15, margin=ft.margin.only(bottom=10), bgcolor=ft.Colors.WHITE,
-            border_radius=12, border=ft.border.all(1, ft.Colors.GREY_200),
-            content=ft.Row([
-                ft.CircleAvatar(content=ft.Text(name[0].upper()), bgcolor=ft.Colors.BLUE_50, color=PRIMARY),
-                ft.Container(width=10),
-                ft.Column([
-                    ft.Text(name, weight=ft.FontWeight.BOLD, color=TEXT_LIGHT, size=16),
-                    ft.Text(status_text, color=status_color, size=12, weight=ft.FontWeight.BOLD),
-                ], expand=True),
-                ft.Icon(ft.Icons.CHEVRON_RIGHT, color=TEXT_MUTED)
-            ])
+            padding=15,
+            margin=ft.margin.only(bottom=10),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=12,
+            border=ft.border.all(1, ft.Colors.GREY_200),
+            content=ft.Column([
+                ft.Row([
+                    ft.CircleAvatar(
+                        content=ft.Text(name[0].upper(), weight=ft.FontWeight.BOLD), 
+                        bgcolor=ft.Colors.BLUE_50, 
+                        color=PRIMARY
+                    ),
+                    ft.Container(width=10),
+                    ft.Column([
+                        ft.Text(name, weight=ft.FontWeight.BOLD, color=TEXT_LIGHT, size=16),
+                        ft.Text(status_text, color=status_color, size=12, weight=ft.FontWeight.BOLD),
+                    ], expand=True),
+                    ft.Icon(ft.Icons.CHEVRON_RIGHT, color=TEXT_MUTED)
+                ]),
+            ]),
+            ink=True,
+            on_click=lambda e: print(f"Abrir detalhes de {name}")
         )
 
     def _alert_tile(self, text, icon, color):
-        return ft.Container(content=ft.Row([ft.Icon(icon, color=color), ft.Text(text, color=TEXT_LIGHT)]))
+        return ft.Container(
+            margin=ft.margin.only(bottom=10),
+            padding=10,
+            bgcolor=ft.Colors.WHITE,
+            border_radius=10,
+            content=ft.Row([
+                ft.Icon(icon, color=color),
+                ft.Container(width=10),
+                ft.Text(text, expand=True, color=TEXT_LIGHT)
+            ])
+        )
 
     def logout(self, e):
-        self.page.client_storage.clear()
+        self.page.client_storage.remove("supabase_token")
+        self.page.client_storage.remove("user_role")
         self.page.go("/login")
