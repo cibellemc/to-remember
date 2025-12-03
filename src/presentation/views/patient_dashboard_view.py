@@ -2,7 +2,6 @@ import flet as ft
 from common.colors import BACKGROUND_LIGHT, TEXT_LIGHT, TEXT_MUTED, PRIMARY
 
 class PatientDashboardView(ft.View):
-    # ADICIONADO: auth_service no construtor
     def __init__(self, page: ft.Page, user_name: str, auth_service):
         super().__init__(route="/dashboard/patient", bgcolor=BACKGROUND_LIGHT)
         self.page = page
@@ -25,10 +24,10 @@ class PatientDashboardView(ft.View):
         )
 
         self.tabs_content = [
-            self._view_games(),
-            self._view_progress(),
-            self._view_caregivers(),
-            self._view_profile(),
+            self._view_games(),      # Aba 0: Jogos
+            self._view_progress(),   # Aba 1: Progresso
+            self._view_caregivers(), # Aba 2: Rede
+            self._view_profile(),    # Aba 3: Perfil
         ]
 
         self.body_container = ft.Container(content=self.tabs_content[0], expand=True, padding=20)
@@ -97,16 +96,68 @@ class PatientDashboardView(ft.View):
 
     def update_invite_status(self, link_id, status):
         try:
+            # Ao aceitar, vincula o ID do paciente na tabela
+            updates = {"status": status}
+            if status == 'active':
+                user = self.auth_service.supabase.auth.get_user()
+                updates["patient_id"] = user.user.id
+                updates["patient_name"] = self.user_name
+
             self.auth_service.supabase.table("caregiver_patient_links")\
-                .update({"status": status})\
+                .update(updates)\
                 .eq("id", link_id)\
                 .execute()
             
             msg = "Convite aceito!" if status == 'active' else "Convite recusado."
             self.page.open(ft.SnackBar(ft.Text(msg), bgcolor=ft.Colors.GREEN if status == 'active' else ft.Colors.RED))
-            self.load_network() # Recarrega
+            self.load_network() 
         except Exception as e:
             self.page.open(ft.SnackBar(ft.Text(f"Erro: {e}"), bgcolor=ft.Colors.RED))
+
+    def change_tab(self, e):
+        index = e.control.selected_index
+        self.body_container.content = self.tabs_content[index]
+        self.appbar.title.value = ["Jogos", "Meu Progresso", "Minha Rede", "Meu Perfil"][index]
+        self.update()
+
+    # --- CORREÇÃO AQUI: Retornar uma Coluna com conteúdo ---
+    def _view_games(self): 
+        return ft.Column(
+            [
+                ft.Text(f"Olá, {self.user_name}!", size=28, weight=ft.FontWeight.BOLD, color=TEXT_LIGHT),
+                ft.Text("Vamos exercitar a mente hoje?", size=16, color=TEXT_MUTED),
+                ft.Container(height=20),
+                
+                # Card do Jogo da Memória
+                self._game_card(
+                    "Memória", 
+                    ft.Icons.MEMORY, 
+                    "Encontre os pares", 
+                    ft.Colors.BLUE,
+                    on_click_action=lambda: self.page.go("/game/memory") 
+                ),
+                
+                # Outros jogos (placeholders)
+                self._game_card("Lógica", ft.Icons.LIGHTBULB, "Resolva os desafios", ft.Colors.ORANGE),
+                self._game_card("Foco", ft.Icons.CENTER_FOCUS_STRONG, "Atenção plena", ft.Colors.PURPLE),
+            ],
+            scroll=ft.ScrollMode.ADAPTIVE
+        )
+
+    def _view_progress(self):
+        return ft.Column([
+            ft.Container(
+                height=200, 
+                bgcolor=ft.Colors.WHITE, 
+                border_radius=16,
+                content=ft.Column([
+                    ft.Text("Pontos Totais", color=TEXT_MUTED),
+                    ft.Text("1.250", size=40, weight=ft.FontWeight.BOLD, color=PRIMARY),
+                    ft.Text("+100 hoje", color=ft.Colors.GREEN)
+                ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                alignment=ft.alignment.center
+            )
+        ])
 
     def _view_caregivers(self):
         return ft.Column(
@@ -125,6 +176,38 @@ class PatientDashboardView(ft.View):
                 self.connected_column,
             ],
             scroll=ft.ScrollMode.ADAPTIVE
+        )
+
+    def _view_profile(self):
+        return ft.Column([
+            ft.Container(
+                alignment=ft.alignment.center,
+                content=ft.Column([
+                    ft.CircleAvatar(radius=50, content=ft.Icon(ft.Icons.PERSON, size=50)),
+                    ft.Text(self.user_name, size=22, weight=ft.FontWeight.BOLD, color=TEXT_LIGHT),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+            ),
+            ft.Container(height=30),
+            ft.ListTile(leading=ft.Icon(ft.Icons.LOGOUT, color=ft.Colors.RED), title=ft.Text("Sair", color=ft.Colors.RED), on_click=self.logout),
+        ])
+
+    def _game_card(self, title, icon, subtitle, color, on_click_action=None):
+        return ft.Container(
+            padding=20,
+            margin=ft.margin.only(bottom=15),
+            bgcolor=ft.Colors.WHITE,
+            border_radius=16,
+            content=ft.Row([
+                ft.Container(content=ft.Icon(icon, color=color, size=30), bgcolor=ft.Colors.with_opacity(0.1, color), padding=12, border_radius=12),
+                ft.Container(width=15),
+                ft.Column([
+                    ft.Text(title, weight=ft.FontWeight.BOLD, color=TEXT_LIGHT, size=18),
+                    ft.Text(subtitle, color=TEXT_MUTED, size=13),
+                ], expand=True),
+                ft.Icon(ft.Icons.PLAY_CIRCLE_FILL, color=PRIMARY, size=40)
+            ]),
+            ink=True,
+            on_click=lambda e: on_click_action() if on_click_action else print(f"Jogar {title}")
         )
 
     def _request_card(self, name, relation, link_id):
@@ -156,13 +239,7 @@ class PatientDashboardView(ft.View):
             ])
         )
 
-    def change_tab(self, e):
-        index = e.control.selected_index
-        self.body_container.content = self.tabs_content[index]
-        self.appbar.title.value = ["Jogos", "Meu Progresso", "Minha Rede", "Meu Perfil"][index]
-        self.update()
-
-    # ... (Mantenha _view_games, _view_progress, _view_profile do código anterior)
-    def _view_games(self): return ft.Text("Jogos") # Simplificado para o exemplo, mantenha o seu
-    def _view_progress(self): return ft.Text("Progresso")
-    def _view_profile(self): return ft.Text("Perfil")
+    def logout(self, e):
+        self.page.client_storage.remove("supabase_token")
+        self.page.client_storage.remove("user_role")
+        self.page.go("/login")

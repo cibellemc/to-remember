@@ -72,3 +72,21 @@ class AuthService:
 
     def sign_out(self):
         self.supabase.auth.sign_out()
+
+    def save_game_result(self, game_type: str, difficulty: int, time_taken: float, mistakes: int):
+        try:
+            user = self.supabase.auth.get_user()
+            user_id = user.user.id
+            
+            data = {
+                "user_id": user_id,
+                "game_type": game_type,
+                "difficulty_level": difficulty,
+                "time_taken_seconds": time_taken,
+                "mistakes_count": mistakes
+            }
+            
+            self.supabase.table("game_results").insert(data).execute()
+            print("Resultado salvo com sucesso!")
+        except Exception as e:
+            print(f"Erro ao salvar resultado: {e}")

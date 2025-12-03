@@ -9,6 +9,7 @@ from presentation.views.register_view import RegisterView
 # Importe as NOVAS Views separadas
 from presentation.views.patient_dashboard_view import PatientDashboardView
 from presentation.views.caregiver_dashboard_view import CaregiverDashboardView
+from presentation.views.memory_game_view import MemoryGameView
 
 # 2. Importe o AuthService e as Cores
 from app.services.auth_service import AuthService
@@ -71,6 +72,8 @@ def main(page: ft.Page):
                 page.views.append(RegisterSpecificsView(page, role, basic_data, auth_service))
             else:
                 page.go("/login")
+        elif page.route == "/game/memory":
+             page.views.append(MemoryGameView(page, auth_service))
 
         # Rota 6: Dashboard (SEPARADA)
         elif page.route.startswith("/dashboard/"):
