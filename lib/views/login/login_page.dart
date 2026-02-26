@@ -381,11 +381,11 @@ class _LoginPageState extends State<LoginPage> {
           'Dados profissionais',
           style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 12),
-        const Text(
-          'Precisamos validar seu registro como profissional.',
-          style: TextStyle(fontSize: 18, color: Colors.black54),
-        ),
+        // const SizedBox(height: 12),
+        // const Text(
+        //   'Precisamos validar seu registro como profissional.',
+        //   style: TextStyle(fontSize: 18, color: Colors.black54),
+        // ),
         const SizedBox(height: 24),
         _SegmentedProgress(
           stepNames: const [
