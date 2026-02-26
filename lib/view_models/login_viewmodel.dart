@@ -11,47 +11,93 @@ class LoginViewModel extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  // Wizard State
+  //Wizard State
   int _currentStep = 0;
   int get currentStep => _currentStep;
 
   // Selected Role
-  String _selectedRole = 'patient';
-  String get selectedRole => _selectedRole;
+  String? _selectedRole;
+  String? get selectedRole => _selectedRole;
 
   // Form Data
   String _name = '';
+  String get name => _name;
   String _email = '';
+  String get email => _email;
   String _password = '';
+  String get password => _password;
   String _confirmPassword = '';
+  String get confirmPassword => _confirmPassword;
   String _patientName = '';
   String get patientName => _patientName;
-  String _caregiverType = 'relative';
-  String get caregiverType => _caregiverType;
+  String? _caregiverType;
+  String? get caregiverType => _caregiverType;
   String _professionalRegistry = '';
+  String get professionalRegistry => _professionalRegistry;
+  String _specialty = '';
+  String get specialty => _specialty;
 
   void setRole(String role) {
     _selectedRole = role;
     notifyListeners();
   }
 
-  void setName(String value) => _name = value;
-  void setEmail(String value) => _email = value;
-  void setPassword(String value) => _password = value;
-  void setConfirmPassword(String value) => _confirmPassword = value;
-  void setPatientName(String value) => _patientName = value;
+  void setName(String value) {
+    _name = value;
+    notifyListeners();
+  }
+
+  void setEmail(String value) {
+    _email = value;
+    notifyListeners();
+  }
+
+  void setPassword(String value) {
+    _password = value;
+    notifyListeners();
+  }
+
+  void setConfirmPassword(String value) {
+    _confirmPassword = value;
+    _confirmPasswordError = null;
+    notifyListeners();
+  }
+
+  void setPatientName(String value) {
+    _patientName = value;
+    notifyListeners();
+  }
+
   void setCaregiverType(String value) {
     _caregiverType = value;
     notifyListeners();
   }
 
-  void setProfessionalRegistry(String value) => _professionalRegistry = value;
+  void setProfessionalRegistry(String value) {
+    _professionalRegistry = value;
+    notifyListeners();
+  }
+
+  void setSpecialty(String value) {
+    _specialty = value;
+    notifyListeners();
+  }
 
   // Login Mode
-  bool _isLoginMode = false;
-  bool get isLoginMode => _isLoginMode;
+  bool? _isLoginMode;
+  bool get isLoginMode => _isLoginMode ?? false;
+  bool? get isLoginModeRaw => _isLoginMode;
+
+  void setLoginMode(bool value) {
+    if (_isLoginMode != value) {
+      _isLoginMode = value;
+      _clearErrors();
+      notifyListeners();
+    }
+  }
+
   void toggleLoginMode() {
-    _isLoginMode = !_isLoginMode;
+    _isLoginMode = !isLoginMode;
     _clearErrors();
     notifyListeners();
   }
@@ -90,7 +136,7 @@ class LoginViewModel extends ChangeNotifier {
 
   // Navigation
   void nextStep() {
-    if (_validateStep()) {
+    if (validateCurrentStep()) {
       _currentStep++;
       notifyListeners();
     }
@@ -104,24 +150,39 @@ class LoginViewModel extends ChangeNotifier {
     }
   }
 
-  bool _validateStep() {
+  bool validateCurrentStep() {
     _clearErrors();
 
-    if (_currentStep == 0) return true;
+    if (_currentStep == 0) {
+      return _selectedRole != null;
+    }
 
     if (_selectedRole == 'patient') return true;
 
+    // Step 1: First time access? (Sim/Não)
     if (_selectedRole == 'caregiver' && _currentStep == 1) {
+      return _isLoginMode != null;
+    }
+
+    // Step 2: Caregiver Profile (Familiar/Médico) (Only if Sim)
+    if (_selectedRole == 'caregiver' && _currentStep == 2 && !isLoginMode) {
+      return _caregiverType != null;
+    }
+
+    // Step 3 (or 2 if login): Basic Info + Professional Info if needed
+    if (_selectedRole == 'caregiver' &&
+        ((!isLoginMode && _currentStep == 3) ||
+            (isLoginMode && _currentStep == 2))) {
       bool isValid = true;
-      if (!_isLoginMode && _name.isEmpty) {
+      if (!isLoginMode && _name.trim().isEmpty) {
         _nameError = 'Por favor, informe seu nome.';
         isValid = false;
       }
-      if (_email.isEmpty || !_email.contains('@')) {
+      if (_email.trim().isEmpty || !_email.contains('@')) {
         _emailError = 'Por favor, informe um email válido.';
         isValid = false;
       }
-      if (!_isLoginMode) {
+      if (!isLoginMode) {
         if (_password.length < 6) {
           _passwordError = 'A senha deve ter pelo menos 6 caracteres.';
           isValid = false;
@@ -134,26 +195,41 @@ class LoginViewModel extends ChangeNotifier {
         _passwordError = 'Digite sua senha.';
         isValid = false;
       }
-      notifyListeners();
+
       return isValid;
     }
 
-    if (_selectedRole == 'caregiver' && _currentStep == 2) {
-      if (_isLoginMode) return true;
+    // Step 4: Professional info
+    if (_selectedRole == 'caregiver' &&
+        !isLoginMode &&
+        _caregiverType == 'professional' &&
+        _currentStep == 4) {
       bool isValid = true;
-      if (_patientName.trim().isEmpty) {
-        _patientNameError = 'Por favor, informe o nome do paciente.';
+      if (_professionalRegistry.trim().isEmpty) {
+        _registryError = 'Por favor, informe seu CRM/Registro.';
         isValid = false;
       }
-      if (_caregiverType == 'professional' && _professionalRegistry.isEmpty) {
-        _registryError = 'Por favor, informe seu registro.';
-        isValid = false;
-      }
-      if (!isValid) notifyListeners();
       return isValid;
     }
 
     return true;
+  }
+
+  bool get canSubmit {
+    if (_selectedRole == 'patient') return true;
+    if (_isLoginMode == true) {
+      return _email.trim().isNotEmpty && _password.isNotEmpty;
+    } else {
+      bool filled =
+          _name.trim().isNotEmpty &&
+          _email.trim().isNotEmpty &&
+          _password.isNotEmpty &&
+          _confirmPassword.isNotEmpty;
+      if (_caregiverType == 'professional') {
+        filled = filled && _professionalRegistry.trim().isNotEmpty;
+      }
+      return filled;
+    }
   }
 
   Future<bool> finishRegistration() async {
@@ -172,7 +248,7 @@ class LoginViewModel extends ChangeNotifier {
           fullName: displayName,
         );
       } else {
-        if (_isLoginMode) {
+        if (isLoginMode) {
           await _authRepository.signInWithEmailPassword(
             email: _email.trim(),
             password: _password,
@@ -186,6 +262,8 @@ class LoginViewModel extends ChangeNotifier {
               'role': 'caregiver',
               'caregiver_type': _caregiverType,
               'professional_registry': _professionalRegistry,
+              'specialty': _specialty,
+              'patient_name': _patientName.trim(),
             },
           );
         }

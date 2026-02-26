@@ -16,8 +16,11 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _patientNameController = TextEditingController();
   final _registryController = TextEditingController();
+  final _specialtyController = TextEditingController();
+
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
@@ -25,483 +28,651 @@ class _LoginPageState extends State<LoginPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _patientNameController.dispose();
     _registryController.dispose();
+    _specialtyController.dispose();
     super.dispose();
-  }
-
-  Future<void> _handleFinish(BuildContext context, LoginViewModel vm) async {
-    final success = await vm.finishRegistration();
-    if (!context.mounted) return;
-
-    if (success) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => vm.selectedRole == 'patient'
-              ? const PatientHomePage()
-              : const CaregiverHomePage(),
-        ),
-      );
-    } else if (vm.errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(vm.errorMessage!),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<LoginViewModel>(
-      builder: (context, vm, _) {
-        final isLastStep = _isLastStep(vm);
-        final totalSteps = _totalSteps(vm);
+    final vm = Provider.of<LoginViewModel>(context);
+    final primaryColor = const Color(0xFF009688); // Teal color from images
 
-        return Scaffold(
-          appBar: AppBar(
-            leading: vm.currentStep > 0
-                ? IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: vm.previousStep,
-                  )
-                : null,
-            automaticallyImplyLeading: vm.currentStep > 0,
-            title: Text(_stepTitle(vm)),
-            centerTitle: true,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-          ),
-          body: Column(
-            children: [
-              // Progress bar
-              if (totalSteps > 1)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Row(
-                    children: List.generate(totalSteps, (i) {
-                      final done = i < vm.currentStep;
-                      final current = i == vm.currentStep;
-                      return Expanded(
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          height: 6,
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          decoration: BoxDecoration(
-                            color: done || current
-                                ? Theme.of(context).primaryColor
-                                : Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-              const SizedBox(height: 8),
-
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: _buildStep(context, vm),
-                ),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        leading: vm.currentStep > 0
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.black54),
+                onPressed: vm.previousStep,
+              )
+            : null,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: primaryColor,
+                borderRadius: BorderRadius.circular(8),
               ),
-
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 60,
-                  child: ElevatedButton(
-                    onPressed: vm.isLoading
-                        ? null
-                        : () {
-                            if (isLastStep) {
-                              _handleFinish(context, vm);
-                            } else {
-                              vm.nextStep();
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isLastStep || vm.currentStep == 0
-                          ? Theme.of(
-                              context,
-                            ).primaryColor.withValues(alpha: 0.5)
-                          : Theme.of(context).primaryColor,
-                      // Match the mockup's softer teal color if not last stage or specific logic
-                      // But I'll stick to a consistent style for now as requested.
-                    ),
-                    child: vm.isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                isLastStep
-                                    ? 'CONCLUIR'
-                                    : (vm.currentStep == 0
-                                          ? 'Continuar'
-                                          : 'PRÓXIMO'),
-                              ),
-                              if (vm.currentStep == 0) ...[
-                                const SizedBox(width: 8),
-                                const Icon(Icons.arrow_forward, size: 18),
-                              ],
-                            ],
-                          ),
-                  ),
-                ),
+              child: const Icon(Icons.favorite, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              'To Remember',
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
               ),
-            ],
-          ),
-        );
-      },
+            ),
+          ],
+        ),
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: _buildStepContent(context, vm, primaryColor),
+              ),
+            ),
+            _buildBottomAction(vm, primaryColor),
+          ],
+        ),
+      ),
     );
   }
 
-  int _totalSteps(LoginViewModel vm) {
-    if (vm.selectedRole == 'patient') return 2;
-    return vm.isLoginMode ? 2 : 3;
-  }
+  Widget _buildStepContent(
+    BuildContext context,
+    LoginViewModel vm,
+    Color primaryColor,
+  ) {
+    if (vm.selectedRole == 'patient') {
+      return _buildRoleSelection(vm, primaryColor);
+    }
 
-  bool _isLastStep(LoginViewModel vm) {
-    if (vm.selectedRole == 'patient' && vm.currentStep == 1) return true;
-    if (vm.selectedRole == 'caregiver' && vm.isLoginMode && vm.currentStep == 1)
-      return true;
-    if (vm.selectedRole == 'caregiver' &&
-        !vm.isLoginMode &&
-        vm.currentStep == 2)
-      return true;
-    return false;
-  }
-
-  String _stepTitle(LoginViewModel vm) {
     switch (vm.currentStep) {
       case 0:
-        return 'Identificação';
+        return _buildRoleSelection(vm, primaryColor);
       case 1:
-        if (vm.selectedRole == 'patient') return 'Como te chamamos?';
-        return 'Sua Conta';
+        return _buildFirstTimeCheck(vm, primaryColor);
       case 2:
-        return 'Dados do Paciente';
+        return vm.isLoginMode
+            ? _buildBasicInfo(vm, primaryColor)
+            : _buildCaregiverTypeSelection(vm, primaryColor);
+      case 3:
+        return _buildBasicInfo(vm, primaryColor);
+      case 4:
+        return _buildProfessionalInfo(vm, primaryColor);
       default:
-        return '';
+        return const SizedBox();
     }
   }
 
-  Widget _buildStep(BuildContext context, LoginViewModel vm) {
-    final theme = Theme.of(context);
-    // Step 0: Role Selection
-    if (vm.currentStep == 0) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Subheader from mockup
-          Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.favorite,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'To Remember',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          Text(
-            'Como você quer\nusar o app?',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Escolha seu perfil para começar.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 32),
-          _RoleCard(
-            title: 'Quero jogar',
-            subtitle:
-                'Sou paciente ou quero usar os jogos e atividades do app.',
-            image: 'images/role-patient.jpg',
-            isSelected: vm.selectedRole == 'patient',
-            onTap: () => vm.setRole('patient'),
-          ),
-          const SizedBox(height: 16),
-          _RoleCard(
-            title: 'Sou cuidador',
-            subtitle: 'Cuido de alguém e quero acompanhar o progresso.',
-            image: 'images/role-caregiver.jpg',
-            isSelected: vm.selectedRole == 'caregiver',
-            onTap: () => vm.setRole('caregiver'),
-          ),
-          const SizedBox(height: 32),
-        ],
-      );
-    }
+  Widget _buildRoleSelection(LoginViewModel vm, Color primaryColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Como você quer usar o app?',
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        ),
+        // const SizedBox(height: 12),
+        // const Text(
+        //   'Escolha seu perfil para começar.',
+        //   style: TextStyle(fontSize: 18, color: Colors.black54),
+        // ),
+        const SizedBox(height: 32),
+        _OptionCard(
+          title: 'Quero jogar',
+          subtitle: 'Sou paciente ou quero usar os jogos e atividades do app.',
+          icon: Icons.videogame_asset_outlined,
+          isSelected: vm.selectedRole == 'patient',
+          onTap: () {
+            vm.setRole('patient');
+            // For patient, role selection is the last step.
+            // Do not auto advance. Just show the final button.
+          },
+          primaryColor: primaryColor,
+        ),
+        const SizedBox(height: 16),
+        _OptionCard(
+          title: 'Sou cuidador',
+          subtitle: 'Cuido de alguém e quero acompanhar o progresso.',
+          icon: Icons.person_search_outlined,
+          isSelected: vm.selectedRole == 'caregiver',
+          onTap: () {
+            vm.setRole('caregiver');
+            Future.delayed(
+              const Duration(milliseconds: 300),
+              () => vm.nextStep(),
+            );
+          },
+          primaryColor: primaryColor,
+        ),
+      ],
+    );
+  }
 
-    // Step 1 - Patient: Name
-    if (vm.selectedRole == 'patient' && vm.currentStep == 1) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Como você prefere ser chamado?',
-            style: Theme.of(context).textTheme.headlineSmall,
+  Widget _buildFirstTimeCheck(LoginViewModel vm, Color primaryColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'É sua primeira vez aqui?',
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        ),
+        // const SizedBox(height: 12),
+        // const Text(
+        //   'Assim podemos direcionar você corretamente.',
+        //   style: TextStyle(fontSize: 18, color: Colors.black54),
+        // ),
+        const SizedBox(height: 32),
+        _OptionCard(
+          title: 'Sim, sou novo',
+          subtitle: 'Quero criar minha conta e começar a usar o app.',
+          icon: Icons.auto_awesome_outlined,
+          isSelected: vm.isLoginModeRaw == false,
+          onTap: () {
+            vm.setLoginMode(false);
+            Future.delayed(
+              const Duration(milliseconds: 300),
+              () => vm.nextStep(),
+            );
+          },
+          primaryColor: primaryColor,
+        ),
+        const SizedBox(height: 16),
+        _OptionCard(
+          title: 'Já tenho conta',
+          subtitle: 'Quero entrar com meu e-mail e senha.',
+          icon: Icons.login_outlined,
+          isSelected: vm.isLoginModeRaw == true,
+          onTap: () {
+            vm.setLoginMode(true);
+            Future.delayed(
+              const Duration(milliseconds: 300),
+              () => vm.nextStep(),
+            );
+          },
+          primaryColor: primaryColor,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCaregiverTypeSelection(LoginViewModel vm, Color primaryColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Qual seu perfil?',
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        ),
+        // const SizedBox(height: 12),
+        // const Text(
+        //   'Assim podemos direcionar você corretamente.',
+        //   style: TextStyle(fontSize: 18, color: Colors.black54),
+        // ),
+        const SizedBox(height: 24),
+        _SegmentedProgress(
+          stepNames: vm.caregiverType == 'professional'
+              ? const [
+                  'Perfil do cuidador',
+                  'Dados básicos',
+                  'Dados profissionais',
+                ]
+              : const ['Perfil do cuidador', 'Dados básicos'],
+          currentStepIndex: 0,
+          primaryColor: primaryColor,
+        ),
+        const SizedBox(height: 24),
+        _OptionCard(
+          title: 'Familiar / Amigo',
+          subtitle: 'Acompanhe o dia a dia de quem você cuida',
+          icon: Icons.people_outline,
+          isSelected: vm.caregiverType == 'relative',
+          onTap: () {
+            vm.setCaregiverType('relative');
+            Future.delayed(
+              const Duration(milliseconds: 300),
+              () => vm.nextStep(),
+            );
+          },
+          primaryColor: primaryColor,
+        ),
+        const SizedBox(height: 16),
+        _OptionCard(
+          title: 'Médico / Enfermeiro',
+          subtitle: 'Profissional de saúde com registro',
+          icon: Icons.medical_services_outlined,
+          isSelected: vm.caregiverType == 'professional',
+          onTap: () {
+            vm.setCaregiverType('professional');
+            Future.delayed(
+              const Duration(milliseconds: 300),
+              () => vm.nextStep(),
+            );
+          },
+          primaryColor: primaryColor,
+        ),
+        const SizedBox(height: 24),
+        Center(
+          child: _LoginLink(vm: vm, primaryColor: primaryColor),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBasicInfo(LoginViewModel vm, Color primaryColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          vm.isLoginMode ? 'Acesse sua conta' : 'Informações básicas',
+          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        ),
+        // const SizedBox(height: 12),
+        // Text(
+        //   vm.isLoginMode
+        //       ? 'Preencha seus dados para entrar.'
+        //       : 'Preencha seus dados para criar sua conta.',
+        //   style: const TextStyle(fontSize: 18, color: Colors.black54),
+        // ),
+        const SizedBox(height: 24),
+        if (!vm.isLoginMode) ...[
+          _SegmentedProgress(
+            stepNames: vm.caregiverType == 'professional'
+                ? const [
+                    'Perfil do cuidador',
+                    'Dados básicos',
+                    'Dados profissionais',
+                  ]
+                : const ['Perfil do cuidador', 'Dados básicos'],
+            currentStepIndex: 1,
+            primaryColor: primaryColor,
           ),
           const SizedBox(height: 24),
-          TextField(
+        ],
+        if (!vm.isLoginMode) ...[
+          _buildField(
+            label: 'Nome completo',
+            hint: 'Ex: Maria da Silva',
             controller: _nameController,
             onChanged: vm.setName,
-            decoration: InputDecoration(
-              labelText: 'Seu nome (opcional)',
-              prefixIcon: const Icon(Icons.edit),
-              errorText: vm.nameError,
-            ),
-          ),
-        ],
-      );
-    }
-
-    // Step 1 - Caregiver: Account
-    if (vm.selectedRole == 'caregiver' && vm.currentStep == 1) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _AuthModeCard(
-                  title: 'PRIMEIRA VEZ',
-                  icon: Icons.person_add,
-                  isSelected: !vm.isLoginMode,
-                  onTap: () {
-                    if (vm.isLoginMode) vm.toggleLoginMode();
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _AuthModeCard(
-                  title: 'JÁ TENHO CONTA',
-                  icon: Icons.login,
-                  isSelected: vm.isLoginMode,
-                  onTap: () {
-                    if (!vm.isLoginMode) vm.toggleLoginMode();
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          if (!vm.isLoginMode) ...[
-            TextField(
-              controller: _nameController,
-              onChanged: vm.setName,
-              decoration: InputDecoration(
-                labelText: 'Nome completo',
-                prefixIcon: const Icon(Icons.person),
-                errorText: vm.nameError,
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-          TextField(
-            controller: _emailController,
-            onChanged: vm.setEmail,
-            keyboardType: TextInputType.emailAddress,
-            decoration: InputDecoration(
-              labelText: 'Email',
-              prefixIcon: const Icon(Icons.email),
-              errorText: vm.emailError,
-            ),
+            error: vm.nameError,
           ),
           const SizedBox(height: 20),
-          TextField(
-            controller: _passwordController,
-            onChanged: vm.setPassword,
-            obscureText: true,
-            decoration: InputDecoration(
-              labelText: 'Senha',
-              prefixIcon: const Icon(Icons.lock),
-              errorText: vm.passwordError,
+        ],
+        _buildField(
+          label: 'E-mail',
+          hint: 'Ex: maria@email.com',
+          controller: _emailController,
+          onChanged: vm.setEmail,
+          error: vm.emailError,
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 20),
+        _buildField(
+          label: 'Senha',
+          hint: 'Mínimo 6 caracteres',
+          controller: _passwordController,
+          onChanged: vm.setPassword,
+          error: vm.passwordError,
+          obscureText: _obscurePassword,
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscurePassword
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+              size: 20,
+            ),
+            onPressed: () {
+              setState(() {
+                _obscurePassword = !_obscurePassword;
+              });
+            },
+          ),
+        ),
+        if (!vm.isLoginMode) ...[
+          const SizedBox(height: 20),
+          _buildField(
+            label: 'Confirmar senha',
+            hint: 'Repita sua senha',
+            controller: _confirmPasswordController,
+            onChanged: vm.setConfirmPassword,
+            error: vm.confirmPasswordError,
+            obscureText: _obscureConfirmPassword,
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscureConfirmPassword
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+                size: 20,
+              ),
+              onPressed: () {
+                setState(() {
+                  _obscureConfirmPassword = !_obscureConfirmPassword;
+                });
+              },
             ),
           ),
-          if (!vm.isLoginMode) ...[
-            const SizedBox(height: 20),
-            TextField(
-              controller: _confirmPasswordController,
-              onChanged: vm.setConfirmPassword,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: 'Confirmar Senha',
-                prefixIcon: const Icon(Icons.lock_outline),
-                errorText: vm.confirmPasswordError,
-              ),
-            ),
-          ],
         ],
-      );
+        const SizedBox(height: 24),
+        Center(
+          child: _LoginLink(vm: vm, primaryColor: primaryColor),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfessionalInfo(LoginViewModel vm, Color primaryColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Dados profissionais',
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Precisamos validar seu registro como profissional.',
+          style: TextStyle(fontSize: 18, color: Colors.black54),
+        ),
+        const SizedBox(height: 24),
+        _SegmentedProgress(
+          stepNames: const [
+            'Perfil do cuidador',
+            'Dados básicos',
+            'Dados profissionais',
+          ],
+          currentStepIndex: 2,
+          primaryColor: primaryColor,
+        ),
+        const SizedBox(height: 24),
+        _buildField(
+          label: 'CRM / Registro profissional',
+          hint: 'Ex: CRM/SP 123456',
+          controller: _registryController,
+          onChanged: vm.setProfessionalRegistry,
+          error: vm.registryError,
+        ),
+        const SizedBox(height: 20),
+        _buildField(
+          label: 'Especialidade / Área de atuação',
+          hint: 'Ex: Geriatria, Neurologia',
+          controller: _specialtyController,
+          onChanged: vm.setSpecialty,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildField({
+    required String label,
+    required String hint,
+    required TextEditingController controller,
+    required Function(String) onChanged,
+    String? error,
+    bool obscureText = false,
+    TextInputType? keyboardType,
+    Widget? suffixIcon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: controller,
+          onChanged: onChanged,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          style: const TextStyle(fontSize: 18),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 16),
+            filled: true,
+            fillColor: Colors.grey.shade50,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 20,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade200),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.teal.shade300, width: 2),
+            ),
+            errorText: error,
+            suffixIcon: suffixIcon,
+            errorStyle: const TextStyle(fontSize: 14),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBottomAction(LoginViewModel vm, Color primaryColor) {
+    bool isLast = false;
+    bool showButton = false;
+
+    if (vm.selectedRole == 'patient' && vm.currentStep == 0) {
+      isLast = true;
+      showButton = true;
+    } else if (vm.selectedRole == 'caregiver') {
+      if (vm.isLoginMode && vm.currentStep == 2) {
+        isLast = true;
+        showButton = true;
+      } else if (!vm.isLoginMode) {
+        if (vm.caregiverType == 'relative' && vm.currentStep == 3) {
+          isLast = true;
+          showButton = true;
+        } else if (vm.caregiverType == 'professional') {
+          if (vm.currentStep == 4) {
+            isLast = true;
+            showButton = true;
+          } else if (vm.currentStep == 3) {
+            isLast = false;
+            showButton = true;
+          }
+        }
+      }
     }
 
-    // Step 2 - Caregiver: Patient info
-    if (vm.selectedRole == 'caregiver' && vm.currentStep == 2) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    if (!showButton) return const SizedBox.shrink();
+
+    bool isValid = false;
+    if (isLast) {
+      isValid = vm.canSubmit;
+    } else {
+      isValid =
+          vm.name.trim().isNotEmpty &&
+          vm.email.trim().isNotEmpty &&
+          vm.password.isNotEmpty &&
+          vm.confirmPassword.isNotEmpty;
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            'Quem é o paciente?',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _patientNameController,
-            onChanged: vm.setPatientName,
-            decoration: InputDecoration(
-              labelText: 'Nome do paciente',
-              prefixIcon: const Icon(Icons.favorite),
-              errorText: vm.patientNameError,
+          if (vm.errorMessage != null) ...[
+            Text(
+              vm.errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red, fontSize: 12),
             ),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            'Qual sua relação?',
-            style: Theme.of(context).textTheme.labelLarge,
-          ),
-          const SizedBox(height: 16),
-          _RoleCard(
-            title: 'Parente ou Amigo',
-            subtitle: 'Cuidado familiar',
-            image: 'images/onboarding_3.png', // Using a family-related image
-            isSelected: vm.caregiverType == 'relative',
-            onTap: () => vm.setCaregiverType('relative'),
-          ),
-          const SizedBox(height: 12),
-          _RoleCard(
-            title: 'Profissional',
-            subtitle: 'Médico / Enfermeiro',
-            image: 'images/role-caregiver.jpg',
-            isSelected: vm.caregiverType == 'professional',
-            onTap: () => vm.setCaregiverType('professional'),
-          ),
-          if (vm.caregiverType == 'professional') ...[
-            const SizedBox(height: 24),
-            TextField(
-              controller: _registryController,
-              onChanged: vm.setProfessionalRegistry,
-              decoration: InputDecoration(
-                labelText: 'Registro (CRM/COREM)',
-                prefixIcon: const Icon(Icons.badge),
-                errorText: vm.registryError,
-              ),
-            ),
+            const SizedBox(height: 12),
           ],
-        ],
-      );
-    }
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton(
+              onPressed: (!isValid || vm.isLoading)
+                  ? null
+                  : () async {
+                      if (!vm.validateCurrentStep()) return;
 
-    return const SizedBox.shrink();
+                      if (isLast) {
+                        final success = await vm.finishRegistration();
+                        if (success && mounted) {
+                          if (vm.selectedRole == 'patient') {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (_) => const PatientHomePage(),
+                              ),
+                            );
+                          } else {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (_) => const CaregiverHomePage(),
+                              ),
+                            );
+                          }
+                        }
+                      } else {
+                        vm.nextStep();
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                disabledBackgroundColor: Colors.grey.shade300,
+                disabledForegroundColor: Colors.grey.shade500,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: vm.isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          isLast ? 'Finalizar' : 'Continuar',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        // const SizedBox(width: 8),
+                        // Icon(
+                        //   isLast ? Icons.check : Icons.arrow_forward,
+                        //   size: 18,
+                        // ),
+                      ],
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
-// ─── Componentes reutilizáveis ────────────────────────────
-
-class _RoleCard extends StatelessWidget {
+class _OptionCard extends StatelessWidget {
   final String title;
   final String subtitle;
-  final String image;
+  final IconData icon;
   final bool isSelected;
   final VoidCallback onTap;
+  final Color primaryColor;
 
-  const _RoleCard({
+  const _OptionCard({
     required this.title,
     required this.subtitle,
-    required this.image,
+    required this.icon,
     required this.isSelected,
     required this.onTap,
+    required this.primaryColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = theme.primaryColor;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(20),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(24),
+        constraints: const BoxConstraints(minHeight: 140),
         decoration: BoxDecoration(
           color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? color : Colors.grey.shade300,
-            width: isSelected ? 2.5 : 1.5,
+            color: isSelected ? primaryColor : Colors.grey.shade100,
+            width: 2.5,
           ),
-          borderRadius: BorderRadius.circular(24),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: primaryColor.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : [],
         ),
-        child: Column(
+        child: Row(
           children: [
-            Image.asset(image, height: 120, fit: BoxFit.contain),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(height: 16),
             Container(
-              height: 24,
-              width: 24,
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected ? color : Colors.grey.shade300,
-                  width: 2,
-                ),
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: isSelected
-                  ? Center(
-                      child: Container(
-                        height: 12,
-                        width: 12,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: color,
-                        ),
-                      ),
-                    )
-                  : null,
+              child: Icon(
+                icon,
+                color: isSelected ? primaryColor : Colors.black45,
+                size: 40,
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey.shade700,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -510,50 +681,68 @@ class _RoleCard extends StatelessWidget {
   }
 }
 
-class _AuthModeCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
+class _SegmentedProgress extends StatelessWidget {
+  final List<String> stepNames;
+  final int currentStepIndex;
+  final Color primaryColor;
 
-  const _AuthModeCard({
-    required this.title,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
+  const _SegmentedProgress({
+    required this.stepNames,
+    required this.currentStepIndex,
+    required this.primaryColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).primaryColor;
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? color : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? color : Colors.grey.shade300,
-            width: 2,
-          ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: List.generate(stepNames.length, (index) {
+            bool active = index <= currentStepIndex;
+            return Expanded(
+              child: Container(
+                height: 6,
+                margin: EdgeInsets.only(
+                  right: index == stepNames.length - 1 ? 0 : 8,
+                ),
+                decoration: BoxDecoration(
+                  color: active ? primaryColor : Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            );
+          }),
         ),
-        child: Column(
+      ],
+    );
+  }
+}
+
+class _LoginLink extends StatelessWidget {
+  final LoginViewModel vm;
+  final Color primaryColor;
+
+  const _LoginLink({required this.vm, required this.primaryColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        vm.toggleLoginMode();
+      },
+      child: RichText(
+        text: TextSpan(
+          text: vm.isLoginMode ? 'Ainda não tem conta? ' : 'Já tem uma conta? ',
+          style: const TextStyle(color: Colors.black54, fontSize: 18),
           children: [
-            Icon(
-              icon,
-              color: isSelected ? Colors.white : Colors.grey,
-              size: 28,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              textAlign: TextAlign.center,
+            TextSpan(
+              text: vm.isLoginMode ? 'Criar' : 'Entrar',
               style: TextStyle(
+                color: primaryColor,
                 fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: isSelected ? Colors.white : Colors.grey.shade700,
+                decoration: TextDecoration.underline,
+                fontSize: 18,
               ),
             ),
           ],
