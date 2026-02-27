@@ -1,5 +1,26 @@
 import 'package:flutter/material.dart';
 
+class _HorizontalSlidePageTransitionsBuilder extends PageTransitionsBuilder {
+  const _HorizontalSlidePageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(1.0, 0.0),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+      child: FadeTransition(opacity: animation, child: child),
+    );
+  }
+}
+
 class AppTheme {
   static final ThemeData theme = ThemeData(
     colorScheme: ColorScheme.fromSeed(
@@ -10,6 +31,16 @@ class AppTheme {
       surface: const Color(0xFFF5F5F5), // Light Grey background
     ),
     useMaterial3: true,
+
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: _HorizontalSlidePageTransitionsBuilder(),
+        TargetPlatform.iOS: _HorizontalSlidePageTransitionsBuilder(),
+        TargetPlatform.linux: _HorizontalSlidePageTransitionsBuilder(),
+        TargetPlatform.macOS: _HorizontalSlidePageTransitionsBuilder(),
+        TargetPlatform.windows: _HorizontalSlidePageTransitionsBuilder(),
+      },
+    ),
 
     // Component Themes
     elevatedButtonTheme: ElevatedButtonThemeData(

@@ -239,14 +239,18 @@ class LoginViewModel extends ChangeNotifier {
 
     try {
       if (_selectedRole == 'patient') {
-        String displayName = _name.trim();
-        if (displayName.isEmpty) {
-          displayName = 'Paciente #${Random().nextInt(9999)}';
+        // Reuse session if exists, otherwise sign in
+        final currentUser = _authRepository.currentUser;
+        if (currentUser == null) {
+          String displayName = _name.trim();
+          if (displayName.isEmpty) {
+            displayName = 'Paciente #${Random().nextInt(9999)}';
+          }
+          await _authRepository.signInAnonymously(
+            role: 'patient',
+            fullName: displayName,
+          );
         }
-        await _authRepository.signInAnonymously(
-          role: 'patient',
-          fullName: displayName,
-        );
       } else {
         if (isLoginMode) {
           await _authRepository.signInWithEmailPassword(
@@ -270,7 +274,12 @@ class LoginViewModel extends ChangeNotifier {
       }
       return true;
     } catch (e) {
+      debugPrint('Registration Error: $e');
       _errorMessage = _getFriendlyError(e);
+      // If none of the friendly errors matched, show the raw one for debugging
+      if (_errorMessage == 'Ocorreu um erro inesperado. Tente novamente.') {
+        _errorMessage = 'Erro: ${e.toString()}';
+      }
       return false;
     } finally {
       _isLoading = false;

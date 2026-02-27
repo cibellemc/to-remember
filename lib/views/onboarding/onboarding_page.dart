@@ -41,7 +41,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   void _nextPage() {
     if (_currentPage < _items.length - 1) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
     }
@@ -50,7 +50,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   void _previousPage() {
     if (_currentPage > 0) {
       _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
     }

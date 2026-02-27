@@ -22,6 +22,9 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  int _lastStep = 0;
+  bool _isMovingForward = true;
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -37,6 +40,11 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final vm = Provider.of<LoginViewModel>(context);
     final primaryColor = const Color(0xFF009688); // Teal color from images
+
+    if (vm.currentStep != _lastStep) {
+      _isMovingForward = vm.currentStep > _lastStep;
+      _lastStep = vm.currentStep;
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -79,7 +87,47 @@ class _LoginPageState extends State<LoginPage> {
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
-                child: _buildStepContent(context, vm, primaryColor),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  transitionBuilder:
+                      (Widget child, Animation<double> animation) {
+                        final isIncoming =
+                            (child.key as ValueKey<int>).value ==
+                            vm.currentStep;
+
+                        Offset begin;
+                        if (_isMovingForward) {
+                          begin = isIncoming
+                              ? const Offset(1.0, 0.0)
+                              : const Offset(-1.0, 0.0);
+                        } else {
+                          begin = isIncoming
+                              ? const Offset(-1.0, 0.0)
+                              : const Offset(1.0, 0.0);
+                        }
+
+                        return SlideTransition(
+                          position:
+                              Tween<Offset>(
+                                begin: begin,
+                                end: Offset.zero,
+                              ).animate(
+                                CurvedAnimation(
+                                  parent: animation,
+                                  curve: Curves.easeOutCubic,
+                                ),
+                              ),
+                          child: FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          ),
+                        );
+                      },
+                  child: Container(
+                    key: ValueKey<int>(vm.currentStep),
+                    child: _buildStepContent(context, vm, primaryColor),
+                  ),
+                ),
               ),
             ),
             _buildBottomAction(vm, primaryColor),
@@ -135,10 +183,22 @@ class _LoginPageState extends State<LoginPage> {
           subtitle: 'Sou paciente ou quero usar os jogos e atividades do app.',
           icon: Icons.videogame_asset_outlined,
           isSelected: vm.selectedRole == 'patient',
-          onTap: () {
+          onTap: () async {
             vm.setRole('patient');
-            // For patient, role selection is the last step.
-            // Do not auto advance. Just show the final button.
+            // For patient, we auto-register and go to tutorial
+            final success = await vm.finishRegistration();
+            if (success && mounted) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const PatientHomePage()),
+              );
+            } else if (!success && mounted && vm.errorMessage != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(vm.errorMessage!),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           },
           primaryColor: primaryColor,
         ),
@@ -151,7 +211,7 @@ class _LoginPageState extends State<LoginPage> {
           onTap: () {
             vm.setRole('caregiver');
             Future.delayed(
-              const Duration(milliseconds: 300),
+              const Duration(milliseconds: 400),
               () => vm.nextStep(),
             );
           },
@@ -183,7 +243,7 @@ class _LoginPageState extends State<LoginPage> {
           onTap: () {
             vm.setLoginMode(false);
             Future.delayed(
-              const Duration(milliseconds: 300),
+              const Duration(milliseconds: 400),
               () => vm.nextStep(),
             );
           },
@@ -198,7 +258,7 @@ class _LoginPageState extends State<LoginPage> {
           onTap: () {
             vm.setLoginMode(true);
             Future.delayed(
-              const Duration(milliseconds: 300),
+              const Duration(milliseconds: 400),
               () => vm.nextStep(),
             );
           },
@@ -242,7 +302,7 @@ class _LoginPageState extends State<LoginPage> {
           onTap: () {
             vm.setCaregiverType('relative');
             Future.delayed(
-              const Duration(milliseconds: 300),
+              const Duration(milliseconds: 400),
               () => vm.nextStep(),
             );
           },
@@ -469,10 +529,7 @@ class _LoginPageState extends State<LoginPage> {
     bool isLast = false;
     bool showButton = false;
 
-    if (vm.selectedRole == 'patient' && vm.currentStep == 0) {
-      isLast = true;
-      showButton = true;
-    } else if (vm.selectedRole == 'caregiver') {
+    if (vm.selectedRole == 'caregiver') {
       if (vm.isLoginMode && vm.currentStep == 2) {
         isLast = true;
         showButton = true;
@@ -530,6 +587,12 @@ class _LoginPageState extends State<LoginPage> {
                       if (isLast) {
                         final success = await vm.finishRegistration();
                         if (success && mounted) {
+                          // Small delay to let the user see the "success" feel before navigating
+                          await Future.delayed(
+                            const Duration(milliseconds: 600),
+                          );
+                          if (!mounted) return;
+
                           if (vm.selectedRole == 'patient') {
                             Navigator.of(context).pushReplacement(
                               MaterialPageRoute(
@@ -545,6 +608,8 @@ class _LoginPageState extends State<LoginPage> {
                           }
                         }
                       } else {
+                        // Delay for better feedback before going to next step
+                        await Future.delayed(const Duration(milliseconds: 400));
                         vm.nextStep();
                       }
                     },
