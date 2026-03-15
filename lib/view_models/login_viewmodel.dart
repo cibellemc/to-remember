@@ -8,6 +8,8 @@ class LoginViewModel extends ChangeNotifier {
 
   LoginViewModel(this._authRepository);
 
+  AuthRepository get authRepository => _authRepository;
+
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
@@ -37,8 +39,34 @@ class LoginViewModel extends ChangeNotifier {
   String _specialty = '';
   String get specialty => _specialty;
 
+  String _patientBirthdate = '';
+  String get patientBirthdate => _patientBirthdate;
+  String? _patientStage;
+  String? get patientStage => _patientStage;
+
+  int? _connectionChoice; // 1: Link, 2: New
+  int? get connectionChoice => _connectionChoice;
+
+  String _connectionCode = '';
+  String get connectionCode => _connectionCode;
+
   void setRole(String role) {
     _selectedRole = role;
+    notifyListeners();
+  }
+
+  void setPatientBirthdate(String value) {
+    _patientBirthdate = value;
+    notifyListeners();
+  }
+
+  void setPatientStage(String? value) {
+    _patientStage = value;
+    notifyListeners();
+  }
+
+  void setConnectionChoice(int? value) {
+    _connectionChoice = value;
     notifyListeners();
   }
 
@@ -83,6 +111,12 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+
+  void setConnectionCode(String value) {
+    _connectionCode = value;
+    notifyListeners();
+  }
+
   // Login Mode
   bool? _isLoginMode;
   bool get isLoginMode => _isLoginMode ?? false;
@@ -102,6 +136,31 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void resetToFirstStep() {
+    _currentStep = 0;
+    _selectedRole = null;
+    _caregiverType = null;
+    _connectionChoice = null;
+    _clearErrors();
+    notifyListeners();
+  }
+
+  void switchToLogin() {
+    _isLoginMode = true;
+    _currentStep = 2; // Login always has email/pass at step 2
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void prepareForLogin() {
+    _isLoginMode = true;
+    _currentStep = 2;
+    _selectedRole = 'caregiver'; // Default to caregiver for standard login
+    _errorMessage = null;
+    _clearErrors();
+    notifyListeners();
+  }
+
   // Error States
   String? _nameError;
   String? get nameError => _nameError;
@@ -117,6 +176,7 @@ class LoginViewModel extends ChangeNotifier {
 
   String? _patientNameError;
   String? get patientNameError => _patientNameError;
+
 
   String? _registryError;
   String? get registryError => _registryError;
@@ -159,17 +219,17 @@ class LoginViewModel extends ChangeNotifier {
 
     if (_selectedRole == 'patient') return true;
 
-    // Step 1: First time access? (Sim/Não)
+    // Step 1: Login or Register choice?
     if (_selectedRole == 'caregiver' && _currentStep == 1) {
-      return _isLoginMode != null;
+      return isLoginModeRaw != null;
     }
 
-    // Step 2: Caregiver Profile (Familiar/Médico) (Only if Sim)
+    // Step 2: Caregiver Profile (Familiar/Médico) (Only if Register Mode)
     if (_selectedRole == 'caregiver' && _currentStep == 2 && !isLoginMode) {
       return _caregiverType != null;
     }
 
-    // Step 3 (or 2 if login): Basic Info + Professional Info if needed
+    // Step 3 (Register) or 2 (Login): Basic Info
     if (_selectedRole == 'caregiver' &&
         ((!isLoginMode && _currentStep == 3) ||
             (isLoginMode && _currentStep == 2))) {
@@ -212,12 +272,44 @@ class LoginViewModel extends ChangeNotifier {
       return isValid;
     }
 
+    // Step 4 (relative) or 5 (prof): Connection Choice (Link/New)
+    if (_selectedRole == 'caregiver' &&
+        !isLoginMode &&
+        ((_caregiverType == 'relative' && _currentStep == 4) ||
+            (_caregiverType == 'professional' && _currentStep == 5))) {
+      return _connectionChoice != null;
+    }
+
+    // Step 5 (relative) or 6 (prof): Patient Details (New) or Link (Existing)
+    if (_selectedRole == 'caregiver' &&
+        !isLoginMode &&
+        ((_caregiverType == 'relative' && _currentStep == 5) ||
+            (_caregiverType == 'professional' && _currentStep == 6))) {
+      if (_connectionChoice == 2) {
+        // New Patient Flow
+        bool isValid = true;
+        if (_patientName.trim().isEmpty) {
+          _patientNameError = 'O nome do paciente é obrigatório.';
+          isValid = false;
+        }
+        return isValid;
+      } else {
+        // Link Patient Flow (Connection code/QR)
+        if (_connectionCode.trim().isEmpty) {
+          _errorMessage = 'Por favor, insira o código de conexão.';
+          notifyListeners();
+          return false;
+        }
+        return true;
+      }
+    }
+
     return true;
   }
 
   bool get canSubmit {
     if (_selectedRole == 'patient') return true;
-    if (_isLoginMode == true) {
+    if (isLoginMode) {
       return _email.trim().isNotEmpty && _password.isNotEmpty;
     } else {
       bool filled =
@@ -229,6 +321,26 @@ class LoginViewModel extends ChangeNotifier {
         filled = filled && _professionalRegistry.trim().isNotEmpty;
       }
       return filled;
+    }
+  }
+
+  Future<bool> login() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _authRepository.signInWithEmailPassword(
+        email: _email.trim(),
+        password: _password,
+      );
+      return true;
+    } catch (e) {
+      _errorMessage = _getFriendlyError(e);
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -252,23 +364,48 @@ class LoginViewModel extends ChangeNotifier {
           );
         }
       } else {
-        if (isLoginMode) {
-          await _authRepository.signInWithEmailPassword(
-            email: _email.trim(),
-            password: _password,
-          );
-        } else {
+        final metadata = {
+          'full_name': _name.trim(),
+          'role': 'caregiver',
+          'caregiver_type': _caregiverType,
+          'professional_registry': _professionalRegistry,
+          'specialty': _specialty,
+          'patient_name': _patientName.trim(),
+          'patient_stage': _patientStage,
+          'patient_birthdate': _formatDateForSupabase(_patientBirthdate.trim()),
+          'relationship': null,
+        };
+
+        try {
           await _authRepository.signUpWithEmailPassword(
             email: _email.trim(),
             password: _password,
-            metadata: {
-              'full_name': _name.trim(),
-              'role': 'caregiver',
-              'caregiver_type': _caregiverType,
-              'professional_registry': _professionalRegistry,
-              'specialty': _specialty,
-              'patient_name': _patientName.trim(),
-            },
+            metadata: metadata,
+          );
+        } catch (e) {
+          final errorStr = e.toString().toLowerCase();
+          if (errorStr.contains('already registered') || errorStr.contains('user_already_exists')) {
+            // Account exists, try to login and then complete profile if it was partial
+            try {
+              await _authRepository.signInWithEmailPassword(
+                email: _email.trim(),
+                password: _password,
+              );
+              await _authRepository.ensureProfileAndPatientRecord(metadata);
+            } catch (signInErr) {
+              // If sign in fails during rescue, it's likely a password mismatch for the existing account
+              throw Exception('Este e-mail já está em uso. Se ele for seu, tente fazer login ou use outro e-mail no início do cadastro.');
+            }
+          } else {
+            rethrow;
+          }
+        }
+
+        // 4. If linking to existing patient (even if login rescued it)
+        if (_connectionChoice == 1 && _connectionCode.isNotEmpty) {
+          await _authRepository.connectWithCode(
+            _connectionCode,
+            relationship: null,
           );
         }
       }
@@ -293,8 +430,11 @@ class LoginViewModel extends ChangeNotifier {
         msg.contains('User already registered')) {
       return 'Este email já está cadastrado. Tente fazer login.';
     }
-    if (msg.contains('invalid_login_credentials')) {
+    if (msg.contains('invalid_credentials') || msg.contains('invalid_login_credentials')) {
       return 'Email ou senha incorretos.';
+    }
+    if (msg.contains('Este e-mail já está em uso')) {
+      return msg.replaceAll('Exception: ', '').replaceAll('Erro: ', '');
     }
     if (msg.contains('anonymous_provider_disabled')) {
       return 'Login anônimo não está ativado.';
@@ -306,6 +446,22 @@ class LoginViewModel extends ChangeNotifier {
       return 'Email inválido.';
     }
     return 'Ocorreu um erro inesperado. Tente novamente.';
+  }
+
+  String? _formatDateForSupabase(String date) {
+    if (date.isEmpty) return null;
+    final parts = date.split('/');
+    if (parts.length == 3) {
+      try {
+        final d = parts[0].padLeft(2, '0');
+        final m = parts[1].padLeft(2, '0');
+        final y = parts[2];
+        return '$y-$m-$d';
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
   }
 
   User? get currentUser => _authRepository.currentUser;

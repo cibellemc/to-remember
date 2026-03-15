@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
 
     return MultiProvider(
       providers: [
-        Provider<AuthRepository>.value(value: authRepository),
+        ChangeNotifierProvider<AuthRepository>.value(value: authRepository),
         ChangeNotifierProvider(create: (_) => LoginViewModel(authRepository)),
       ],
       child: MaterialApp(

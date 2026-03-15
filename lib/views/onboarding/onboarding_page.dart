@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../login/login_page.dart';
+import '../caregiver/onboarding/registration_page.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
@@ -93,6 +93,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ),
               ],
             ),
+            const SizedBox(height: 20),
+            Divider(color: Colors.grey.shade100, thickness: 1),
+            const SizedBox(height: 20),
             // const SizedBox(height: 4),
             // Text(
             //   'Seu app de cuidado e bem-estar',
@@ -212,8 +215,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     height: 56,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const RegistrationPage()),
                         );
                       },
                       style: ElevatedButton.styleFrom(
