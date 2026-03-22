@@ -3,6 +3,7 @@ import '../data/repositories/auth_repository.dart';
 
 class CaregiverViewModel extends ChangeNotifier {
   final AuthRepository _authRepository;
+  AuthRepository get authRepository => _authRepository;
 
   CaregiverViewModel(this._authRepository) {
     fetchConnectedPatients();
@@ -10,6 +11,9 @@ class CaregiverViewModel extends ChangeNotifier {
 
   List<Map<String, dynamic>> _connectedPatients = [];
   List<Map<String, dynamic>> get connectedPatients => _connectedPatients;
+
+  List<Map<String, dynamic>> _patientCaregivers = [];
+  List<Map<String, dynamic>> get patientCaregivers => _patientCaregivers;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -55,7 +59,21 @@ class CaregiverViewModel extends ChangeNotifier {
 
   void selectPatient(Map<String, dynamic>? patient) {
     _selectedPatient = patient;
+    if (patient != null) {
+      fetchPatientCaregivers(patient['id'].toString());
+    } else {
+      _patientCaregivers = [];
+    }
     notifyListeners();
+  }
+
+  Future<void> fetchPatientCaregivers(String patientId) async {
+    try {
+      _patientCaregivers = await _authRepository.getCaregiversForPatient(patientId);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error fetching patient caregivers: $e');
+    }
   }
 
   Future<void> disconnectFromPatient(String patientId) async {
@@ -124,23 +142,33 @@ class CaregiverViewModel extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>?> getPatientFromCode(String code) async {
+    return _authRepository.getPatientFromCode(code);
+  }
+
   Future<void> updatePatient({
     required String patientId,
     required String name,
     String? stage,
     String? birthdate,
+    bool? isProfileComplete,
   }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
     try {
+      final Map<String, dynamic> updateData = {
+        'name': name,
+        'stage': stage,
+        'birth_date': birthdate,
+      };
+      if (isProfileComplete != null) {
+        updateData['is_profile_complete'] = isProfileComplete;
+      }
+
       await _authRepository.updatePatientRecord(
         patientId: patientId,
-        data: {
-          'name': name,
-          'stage': stage,
-          'birth_date': birthdate,
-        },
+        data: updateData,
       );
       await fetchConnectedPatients();
       // Update selected patient if it's the one we just edited

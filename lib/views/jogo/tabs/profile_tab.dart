@@ -90,201 +90,9 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
   }
 
 
-  void _showBilateralConnectionDialog(BuildContext context) {
-    int dialogStep = 1; // Start directly at code entry
-    final codeController = TextEditingController();
-    final primaryColor = _T.primary;
+// REMOVED: _showBilateralConnectionDialog as patients only share their code now
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return Consumer<AuthRepository>(
-              builder: (context, repo, child) {
-                Widget content;
-                String title = 'Code do Cuidador';
-
-                if (dialogStep == 1) {
-                  content = Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Insira o código de 6 dígitos que seu cuidador lhe forneceu.',
-                        style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                      ),
-                      const SizedBox(height: 24),
-                      TextField(
-                        controller: codeController,
-                        autofocus: true,
-                        maxLength: 6,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 8,
-                          color: primaryColor,
-                        ),
-                        textCapitalization: TextCapitalization.characters,
-                        decoration: _dialogInputDecoration(primaryColor, 'ABC123'),
-                      ),
-                    ],
-                  );
-                } else {
-                  // Fallback or other steps if needed in future
-                  title = 'Conectar Equipe';
-                  content = const SizedBox.shrink();
-                }
-
-                return AlertDialog(
-                  backgroundColor: Colors.white,
-                  surfaceTintColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                  title: Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
-                  ),
-                  content: content,
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancelar'),
-                    ),
-                    if (dialogStep == 1)
-                      ElevatedButton(
-                        onPressed: () async {
-                          try {
-                            await repo.connectWithCode(codeController.text);
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              
-                              // Check if profile needs completion
-                              final updatedProfile = await repo.getPatientProfile();
-                              if (context.mounted && updatedProfile != null && (updatedProfile['is_profile_complete'] == false)) {
-                                _showProfileCompletionDialog(context, updatedProfile);
-                              } else if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Conectado com sucesso!'), backgroundColor: Colors.green),
-                                );
-                              }
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: Colors.red),
-                              );
-                            }
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text('Conectar'),
-                      ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showProfileCompletionDialog(BuildContext context, Map<String, dynamic> profile) {
-    final nameController = TextEditingController(text: profile['name']);
-    final birthdateController = TextEditingController(text: profile['birth_date'] ?? profile['birthdate'] ?? '');
-    String? selectedStage = profile['stage'];
-    final primaryColor = _T.primary;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: Colors.white,
-              surfaceTintColor: Colors.white,
-              title: const Text('Completar Perfil', style: TextStyle(fontWeight: FontWeight.bold)),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Para uma melhor experiência, complete os dados do paciente.'),
-                    const SizedBox(height: 20),
-                    TextField(
-                      controller: nameController,
-                      decoration: _dialogInputDecoration(primaryColor, 'Nome do Paciente'),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: birthdateController,
-                      keyboardType: TextInputType.datetime,
-                      decoration: _dialogInputDecoration(primaryColor, 'Data de Nascimento (DD/MM/AAAA)'),
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      value: selectedStage,
-                      decoration: _dialogInputDecoration(primaryColor, 'Estágio do Alzheimer'),
-                      items: const [
-                        DropdownMenuItem(value: 'inicial', child: Text('Inicial')),
-                        DropdownMenuItem(value: 'moderado', child: Text('Moderado')),
-                        DropdownMenuItem(value: 'avancado', child: Text('Avançado')),
-                      ],
-                      onChanged: (val) => setDialogState(() => selectedStage = val),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Pular'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    try {
-                      final repo = context.read<AuthRepository>();
-                      await repo.updatePatientRecord(
-                        patientId: profile['id'],
-                        data: {
-                          'name': nameController.text,
-                          'birth_date': birthdateController.text,
-                          'stage': selectedStage,
-                          'is_profile_complete': true,
-                        },
-                      );
-                      if (context.mounted) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Perfil atualizado!'), backgroundColor: Colors.green),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Erro ao atualizar: $e'), backgroundColor: Colors.red),
-                        );
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Salvar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
+// REMOVED: _showProfileCompletionDialog as profiles are completed by caregivers or separately
 
   void _copyCode(String code) {
     Clipboard.setData(ClipboardData(text: code));
@@ -414,12 +222,10 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                           children: [
                             _CaregiversList(caregivers: caregivers),
                             const SizedBox(height: 24),
-                            _buildAddButton(context, () => _showBilateralConnectionDialog(context)),
+                            // REMOVED: Conectar novo cuidador button as patients only share their code now
                           ],
                         )
-                      : _EmptyConnectionsBanner(
-                          onAdd: () => _showBilateralConnectionDialog(context),
-                        ),
+                      : const _EmptyConnectionsBanner(),
                 ),
               ),
 
@@ -546,9 +352,7 @@ class _ProfileHeaderCard extends StatelessWidget {
 
 
 class _EmptyConnectionsBanner extends StatelessWidget {
-  final VoidCallback onAdd;
-
-  const _EmptyConnectionsBanner({required this.onAdd});
+  const _EmptyConnectionsBanner();
 
   @override
   Widget build(BuildContext context) {
@@ -592,56 +396,18 @@ class _EmptyConnectionsBanner extends StatelessWidget {
               height: 1.5,
             ),
           ),
-          const SizedBox(height: 32),
-          _buildAddButton(context, onAdd),
+          const SizedBox(height: 12),
+          // REMOVED: _buildAddButton call as patients only share their code now
         ],
       ),
     );
   }
 }
 
-Widget _buildAddButton(BuildContext context, VoidCallback onPressed) {
-  return SizedBox(
-    width: double.infinity,
-    height: 60,
-    child: ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _T.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-      ),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.add_circle_outline, size: 24),
-          SizedBox(width: 12),
-          Text(
-            'Conectar novo cuidador',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    ),
-  );
-}
+// REMOVED: _buildAddButton method
 
 
-InputDecoration _dialogInputDecoration(Color primaryColor, String hint) {
-  return InputDecoration(
-    hintText: hint,
-    hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14, fontWeight: FontWeight.normal),
-    filled: true,
-    fillColor: Colors.grey.shade50,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade100)),
-    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor, width: 2)),
-  );
-}
+// REMOVED: _dialogInputDecoration as it's no longer used in ProfileTab
 
 
 

@@ -23,6 +23,7 @@ class AuthRepository extends ChangeNotifier {
   // Realtime subscriptions
   StreamSubscription? _patientSub;
   StreamSubscription? _caregiverSub;
+  StreamSubscription? _codeSub;
   String? _lastSubscribedPatientId;
 
   Future<void> signInAnonymously({
@@ -195,6 +196,7 @@ class AuthRepository extends ChangeNotifier {
         .isFilter('used_at', null)
         .gt('expires_at', DateTime.now().toUtc().toIso8601String())
         .order('created_at', ascending: false)
+        .limit(1)
         .maybeSingle();
 
     _connectionCode = response?['code'] as String?;
@@ -252,6 +254,7 @@ class AuthRepository extends ChangeNotifier {
       'birth_date': _tryFormatDate(birthdate),
       'auth_id': null, // Caregiver created patient
       'created_by': user.id,
+      'is_profile_complete': (name.isNotEmpty && stage != null),
     }).select('id').single();
 
     final patientId = response['id'].toString();
@@ -273,6 +276,17 @@ class AuthRepository extends ChangeNotifier {
       data['birth_date'] = _tryFormatDate(data['birth_date']);
     }
 
+    // Automatically set profile complete if name and stage exist
+    if (data.containsKey('name') || data.containsKey('stage')) {
+       // We don't have the full record here, but we can peek or let the trigger handle it.
+       // For now, if both are set in the update, we can mark it.
+       // However, a safer way is to let the dashboard check the fields.
+       // But let's check if we have enough to mark it.
+       if (data['name'] != null && data['stage'] != null) {
+         data['is_profile_complete'] = true;
+       }
+    }
+
     await _supabase
         .from('patients')
         .update(data)
@@ -283,6 +297,34 @@ class AuthRepository extends ChangeNotifier {
       await getPatientProfile();
     }
     notifyListeners();
+  }
+
+  Future<Map<String, dynamic>?> getPatientFromCode(String code) async {
+    try {
+      final codeData = await _supabase
+          .from('connection_codes')
+          .select('patient_id, used_at, expires_at')
+          .eq('code', code.toUpperCase())
+          .maybeSingle();
+
+      if (codeData == null) return null;
+      if (codeData['used_at'] != null) return null;
+      
+      final expiresAt = DateTime.parse(codeData['expires_at']);
+      if (expiresAt.isBefore(DateTime.now().toUtc())) return null;
+
+      final patientId = codeData['patient_id'];
+      if (patientId == null) return null;
+
+      return await _supabase
+          .from('patients')
+          .select('*')
+          .eq('id', patientId)
+          .single();
+    } catch (e) {
+      debugPrint('Error getting patient from code: $e');
+      return null;
+    }
   }
 
   Future<Map<String, dynamic>?> connectWithCode(String code) async {
@@ -372,20 +414,31 @@ class AuthRepository extends ChangeNotifier {
 
     if (patient == null) return [];
 
+    return getCaregiversForPatient(patient['id'].toString());
+  }
+
+  Future<List<Map<String, dynamic>>> getCaregiversForPatient(String patientId) async {
     final response = await _supabase
         .from('patient_caregivers')
         .select('*, profiles (*)')
-        .eq('patient_id', patient['id']);
+        .eq('patient_id', patientId);
 
     final List<dynamic> data = response;
-    _connectedCaregivers = data.map((item) {
+    final list = data.map((item) {
       final profile = Map<String, dynamic>.from(item['profiles']);
       profile['added_at'] = item['added_at'];
       profile['relationship'] = item['relationship'];
+      profile['is_admin'] = item['is_admin'];
       return profile;
     }).toList();
-    notifyListeners();
-    return _connectedCaregivers;
+    
+    // If we're updating for the current patient profile, update the local state
+    if (_patientProfile != null && _patientProfile!['id'] == patientId) {
+      _connectedCaregivers = list;
+      notifyListeners();
+    }
+    
+    return list;
   }
 
   void _setupRealtimeListeners() {
@@ -406,6 +459,7 @@ class AuthRepository extends ChangeNotifier {
             final patientId = _patientProfile!['id'].toString();
             if (patientId != _lastSubscribedPatientId) {
                _setupCaregiverListener(patientId);
+               _setupCodeListener(patientId);
             }
           }
         });
@@ -426,11 +480,32 @@ class AuthRepository extends ChangeNotifier {
         });
   }
 
+  void _setupCodeListener(String patientId) {
+    _codeSub?.cancel();
+    _codeSub = _supabase
+        .from('connection_codes')
+        .stream(primaryKey: ['id'])
+        .eq('patient_id', patientId)
+        .listen((data) {
+          if (data.isNotEmpty) {
+            // Find the latest active code
+            final activeCodes = data.where((c) => c['used_at'] == null).toList();
+            if (activeCodes.isNotEmpty) {
+              activeCodes.sort((a, b) => b['created_at'].compareTo(a['created_at']));
+              _connectionCode = activeCodes.first['code'];
+              notifyListeners();
+            }
+          }
+        });
+  }
+
   void _cancelRealtimeListeners() {
     _patientSub?.cancel();
     _caregiverSub?.cancel();
+    _codeSub?.cancel();
     _patientSub = null;
     _caregiverSub = null;
+    _codeSub = null;
     _lastSubscribedPatientId = null;
   }
 
@@ -438,6 +513,16 @@ class AuthRepository extends ChangeNotifier {
   void dispose() {
     _cancelRealtimeListeners();
     super.dispose();
+  }
+
+  String? formatDateBR(String? isoDate) {
+    if (isoDate == null || isoDate.isEmpty) return null;
+    try {
+      final date = DateTime.parse(isoDate).toLocal();
+      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+    } catch (_) {
+      return isoDate;
+    }
   }
 
   String _generateRandomCode(int length) {
