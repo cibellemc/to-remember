@@ -50,16 +50,30 @@ class ConfigTab extends StatelessWidget {
             final confirm = await showDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text('Sair?'),
+                backgroundColor: Colors.white,
+                surfaceTintColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                title: const Text(
+                  'Sair da Conta',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+                ),
                 content: const Text('Deseja realmente sair da sua conta?'),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Cancelar'),
+                    child: Text(
+                      'Cancelar',
+                      style: TextStyle(color: Colors.grey.shade600),
+                    ),
                   ),
-                  TextButton(
+                  ElevatedButton(
                     onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Sair', style: TextStyle(color: Colors.red)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Sair'),
                   ),
                 ],
               ),

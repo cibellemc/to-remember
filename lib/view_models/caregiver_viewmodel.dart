@@ -32,18 +32,18 @@ class CaregiverViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> connectToPatient(String code) async {
+  Future<Map<String, dynamic>?> connectToPatient(String code) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      await _authRepository.connectWithCode(code);
+      final patient = await _authRepository.connectWithCode(code);
       await fetchConnectedPatients();
-      return true;
+      return patient;
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
-      return false;
+      return null;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -72,6 +72,93 @@ class CaregiverViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<String?> createNewPatient({
+    required String name,
+    String? stage,
+    String? birthdate,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      final patientId = await _authRepository.createPatientRecord(
+        name: name,
+        stage: stage,
+        birthdate: birthdate,
+      );
+      await fetchConnectedPatients();
+      return patientId;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      debugPrint('CaregiverViewModel Error: $e');
+      return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> getActiveCodeForPatient(String patientId) async {
+    try {
+      return await _authRepository.getActiveCodeForPatient(patientId);
+    } catch (e) {
+      debugPrint('Error fetching code: $e');
+      return null;
+    }
+  }
+
+  Future<String?> refreshCodeForPatient(String patientId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final code = await _authRepository.generateConnectionCode(patientId: patientId);
+      return code;
+    } catch (e) {
+      _errorMessage = 'Erro ao gerar código: $e';
+      return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> updatePatient({
+    required String patientId,
+    required String name,
+    String? stage,
+    String? birthdate,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    try {
+      await _authRepository.updatePatientRecord(
+        patientId: patientId,
+        data: {
+          'name': name,
+          'stage': stage,
+          'birth_date': birthdate,
+        },
+      );
+      await fetchConnectedPatients();
+      // Update selected patient if it's the one we just edited
+      if (_selectedPatient != null && _selectedPatient!['id'] == patientId) {
+        _selectedPatient = _connectedPatients.firstWhere((p) => p['id'] == patientId);
+      }
+    } catch (e) {
+      _errorMessage = 'Erro ao atualizar paciente: $e';
+      debugPrint('CaregiverViewModel Error: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void setErrorMessage(String? msg) {
+    _errorMessage = msg;
+    notifyListeners();
   }
 
   void clearError() {

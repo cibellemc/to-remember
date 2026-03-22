@@ -191,20 +191,12 @@ class _RegistrationPageState extends State<RegistrationPage> {
         }
         return _buildCaregiverTypeSelection(vm, primaryColor);
       case 3:
-        if (vm.isLoginMode) return const SizedBox(); // Login has only 2 main steps in wizard before final login call
         return _buildBasicInfo(vm, primaryColor);
       case 4:
         if (vm.caregiverType == 'professional') {
           return _buildProfessionalInfo(vm, primaryColor);
         }
-        return _buildChoiceStep(vm, primaryColor);
-      case 5:
-        if (vm.caregiverType == 'professional') {
-          return _buildChoiceStep(vm, primaryColor);
-        }
-        return _buildConnectionStep(vm, primaryColor);
-      case 6:
-        return _buildConnectionStep(vm, primaryColor);
+        return const SizedBox();
       default:
         return const SizedBox();
     }
@@ -470,259 +462,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
     );
   }
 
-  Widget _buildChoiceStep(LoginViewModel vm, Color primaryColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Vínculo com Paciente',
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-        ),
-        // const SizedBox(height: 12),
-        // const Text(
-        //   'Como você deseja começar?',
-        //   style: TextStyle(fontSize: 18, color: Colors.black54),
-        // ),
-        const SizedBox(height: 24),
-        _SegmentedProgress(
-          stepNames: _getStepNames(vm),
-          currentStepIndex: vm.caregiverType == 'professional' ? 4 : 3, // Adjusted index
-          primaryColor: primaryColor,
-        ),
-        const SizedBox(height: 32),
-        _OptionCard(
-          title: 'Vincular ao Paciente',
-          subtitle: 'O paciente já tem o app e vou escanear o QR Code',
-          icon: Icons.qr_code_scanner,
-          isSelected: vm.connectionChoice == 1,
-          onTap: () {
-            vm.setConnectionChoice(1);
-            Future.delayed(
-              const Duration(milliseconds: 400),
-              () => vm.nextStep(),
-            );
-          },
-          primaryColor: primaryColor,
-        ),
-        const SizedBox(height: 16),
-        _OptionCard(
-          title: 'Criar um Novo Paciente',
-          subtitle: 'Vou criar o perfil do paciente agora',
-          icon: Icons.person_add,
-          isSelected: vm.connectionChoice == 2,
-          onTap: () {
-            vm.setConnectionChoice(2);
-            Future.delayed(
-              const Duration(milliseconds: 400),
-              () => vm.nextStep(),
-            );
-          },
-          primaryColor: primaryColor,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildConnectionStep(LoginViewModel vm, Color primaryColor) {
-    if (vm.connectionChoice == 2) {
-      return _buildNewPatientStep(vm, primaryColor);
-    }
-    return _buildLinkStep(vm, primaryColor);
-  }
-
-  Widget _buildNewPatientStep(LoginViewModel vm, Color primaryColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Perfil do Paciente',
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-        ),
-        // const Text(
-        //   'Preencha os dados de quem você cuida.',
-        //   style: TextStyle(fontSize: 18, color: Colors.black54),
-        // ),
-        const SizedBox(height: 24),
-        _SegmentedProgress(
-          stepNames: _getStepNames(vm),
-          currentStepIndex: vm.caregiverType == 'professional' ? 4 : 3,
-          primaryColor: primaryColor,
-        ),
-        const SizedBox(height: 32),
-        // const Text(
-        //   'Dados do Paciente',
-        //   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        // ),
-        const SizedBox(height: 16),
-        _buildField(
-          label: 'Nome do Paciente',
-          hint: 'Ex: João da Silva',
-          controller: _patientNameController,
-          onChanged: vm.setPatientName,
-          error: vm.patientNameError,
-        ),
-        const SizedBox(height: 32),
-        const Text(
-          'Informações Adicionais',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-        _buildField(
-          label: 'Data de Nascimento (Opcional)',
-          hint: 'Ex: 01/01/1950',
-          controller: _patientBirthdateController,
-          onChanged: vm.setPatientBirthdate,
-          keyboardType: TextInputType.datetime,
-        ),
-        const SizedBox(height: 20),
-        const Text(
-          'Fase do Alzheimer',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: vm.patientStage,
-              isExpanded: true,
-              hint: const Text('Selecione uma fase'),
-              items: const [
-                DropdownMenuItem(value: 'inicial', child: Text('Inicial')),
-                DropdownMenuItem(
-                  value: 'intermediaria',
-                  child: Text('Intermediária'),
-                ),
-                DropdownMenuItem(value: 'avancada', child: Text('Avançada')),
-                DropdownMenuItem(
-                  value: 'nao_sei',
-                  child: Text('Não sei informar'),
-                ),
-              ],
-              onChanged: vm.setPatientStage,
-            ),
-          ),
-        ),
-        // const SizedBox(height: 24),
-        // const Center(
-        //   child: Text(
-        //     'Você poderá configurar outros detalhes depois.',
-        //     textAlign: TextAlign.center,
-        //     style: TextStyle(fontSize: 14, color: Colors.grey),
-        //   ),
-        // ),
-      ],
-    );
-  }
-
-  Widget _buildLinkStep(LoginViewModel vm, Color primaryColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const Text(
-          'Conectar Paciente',
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Peça o código de 6 dígitos que aparece no perfil do paciente.',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 16, color: Colors.black54),
-        ),
-        const SizedBox(height: 24),
-        _SegmentedProgress(
-          stepNames: _getStepNames(vm),
-          currentStepIndex: vm.caregiverType == 'professional' ? 4 : 3,
-          primaryColor: primaryColor,
-        ),
-        const SizedBox(height: 40),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.grey.shade100),
-          ),
-          child: Column(
-            children: [
-              const Text(
-                'Código de Acesso',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _connectionCodeController,
-                onChanged: vm.setConnectionCode,
-                maxLength: 6,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 10,
-                  color: primaryColor,
-                ),
-                decoration: InputDecoration(
-                  counterText: '',
-                  hintText: 'ABC123',
-                  hintStyle: TextStyle(
-                    color: Colors.grey.shade200,
-                    letterSpacing: 2,
-                  ),
-                  border: InputBorder.none,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 32),
-        Row(
-          children: [
-            Expanded(child: Divider(color: Colors.grey.shade200)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'OU',
-                style: TextStyle(
-                  color: Colors.grey.shade400,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            Expanded(child: Divider(color: Colors.grey.shade200)),
-          ],
-        ),
-        const SizedBox(height: 32),
-        ElevatedButton.icon(
-          onPressed: () {},
-          icon: const Icon(Icons.qr_code_scanner),
-          label: const Text('Escanear QR Code'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: primaryColor,
-            elevation: 0,
-            minimumSize: const Size(double.infinity, 56),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: primaryColor.withOpacity(0.2)),
-            ),
-          ),
-        ),
-        const SizedBox(height: 32),
-      ],
-    );
-  }
-
   List<String> _getStepNames(LoginViewModel vm) {
     if (vm.isLoginMode) {
       return ['Início', 'Tipo', 'Login'];
@@ -730,8 +469,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
     final names = <String>['Papel', 'Acesso', 'Tipo'];
     names.add('Dados');
     if (vm.caregiverType == 'professional') names.add('Profis.');
-    names.add('Escolha');
-    names.add('Vínculo');
     return names;
   }
 
@@ -790,8 +527,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
     if (vm.isLoginMode) {
       isLast = vm.currentStep == 2;
     } else {
-      isLast = (vm.caregiverType == 'relative' && vm.currentStep == 5) ||
-               (vm.caregiverType == 'professional' && vm.currentStep == 6);
+      isLast = (vm.caregiverType == 'relative' && vm.currentStep == 3) ||
+               (vm.caregiverType == 'professional' && vm.currentStep == 4);
     }
 
     // Role selection step (0) has its own navigation via cards

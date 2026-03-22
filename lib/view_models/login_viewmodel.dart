@@ -17,6 +17,16 @@ class LoginViewModel extends ChangeNotifier {
   int _currentStep = 0;
   int get currentStep => _currentStep;
 
+  int get totalSteps {
+    if (_selectedRole == 'patient') return 1;
+    if (isLoginMode) return 3; // Role (0), Mode (1), LoginInfo (2)
+    if (_selectedRole == 'caregiver') {
+      if (_caregiverType == 'professional') return 5; // Role (0), Mode (1), ProfileType (2), BasicInfo (3), ProfessionalInfo (4)
+      return 4; // Familiar: Role (0), Mode (1), ProfileType (2), BasicInfo (3)
+    }
+    return 5; // Default safety
+  }
+
   // Selected Role
   String? _selectedRole;
   String? get selectedRole => _selectedRole;
@@ -272,38 +282,6 @@ class LoginViewModel extends ChangeNotifier {
       return isValid;
     }
 
-    // Step 4 (relative) or 5 (prof): Connection Choice (Link/New)
-    if (_selectedRole == 'caregiver' &&
-        !isLoginMode &&
-        ((_caregiverType == 'relative' && _currentStep == 4) ||
-            (_caregiverType == 'professional' && _currentStep == 5))) {
-      return _connectionChoice != null;
-    }
-
-    // Step 5 (relative) or 6 (prof): Patient Details (New) or Link (Existing)
-    if (_selectedRole == 'caregiver' &&
-        !isLoginMode &&
-        ((_caregiverType == 'relative' && _currentStep == 5) ||
-            (_caregiverType == 'professional' && _currentStep == 6))) {
-      if (_connectionChoice == 2) {
-        // New Patient Flow
-        bool isValid = true;
-        if (_patientName.trim().isEmpty) {
-          _patientNameError = 'O nome do paciente é obrigatório.';
-          isValid = false;
-        }
-        return isValid;
-      } else {
-        // Link Patient Flow (Connection code/QR)
-        if (_connectionCode.trim().isEmpty) {
-          _errorMessage = 'Por favor, insira o código de conexão.';
-          notifyListeners();
-          return false;
-        }
-        return true;
-      }
-    }
-
     return true;
   }
 
@@ -399,14 +377,6 @@ class LoginViewModel extends ChangeNotifier {
           } else {
             rethrow;
           }
-        }
-
-        // 4. If linking to existing patient (even if login rescued it)
-        if (_connectionChoice == 1 && _connectionCode.isNotEmpty) {
-          await _authRepository.connectWithCode(
-            _connectionCode,
-            relationship: null,
-          );
         }
       }
       return true;

@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../view_models/login_viewmodel.dart';
 import '../caregiver/home/caregiver_home_page.dart';
 import '../jogo/jogo_page.dart';
+import '../onboarding/onboarding_page.dart';
+import '../caregiver/onboarding/registration_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -42,6 +44,18 @@ class _LoginPageState extends State<LoginPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black54),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const OnboardingPage()),
+              );
+            }
+          },
+        ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -175,16 +189,23 @@ class _LoginPageState extends State<LoginPage> {
                 child: GestureDetector(
                   onTap: () {
                     vm.setLoginMode(false);
-                    // Ensure we advance to "Qual seu perfil" (Step 2)
-                    // If we were at Step 1, advance once.
-                    // If somehow we were at Step 0, advance twice.
-                    if (vm.currentStep == 1) {
-                      vm.nextStep();
-                    } else if (vm.currentStep == 0) {
-                      vm.nextStep();
+                    // If we come from RegistrationPage Step 1, advance to Step 2
+                    // If we come from Logout, we need to set role and advance.
+                    if (vm.currentStep == 0) {
+                      vm.setRole('caregiver');
+                      vm.nextStep(); // to Step 1
+                      vm.nextStep(); // to Step 2
+                    } else if (vm.currentStep == 1) {
                       vm.nextStep();
                     }
-                    Navigator.of(context).pop();
+                    
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                    } else {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (_) => const RegistrationPage()),
+                      );
+                    }
                   },
                   child: RichText(
                     text: TextSpan(
