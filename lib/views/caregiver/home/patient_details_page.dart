@@ -227,6 +227,23 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
+            if (patient['status'] == 'inactive')
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                color: Colors.amber.shade100,
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.warning_amber_rounded, size: 16, color: Colors.amber),
+                    SizedBox(width: 8),
+                    Text(
+                      'Este vínculo está inativo. O monitoramento foi pausado.',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange),
+                    ),
+                  ],
+                ),
+              ),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 80, 24, 40),
@@ -395,19 +412,38 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                   const SizedBox(height: 48),
                   SizedBox(
                     width: double.infinity,
-                    child: TextButton.icon(
-                      onPressed: () => _showDisconnectConfirm(context, patient, vm),
-                      icon: const Icon(Icons.link_off, size: 20),
-                      label: const Text('Desconectar Paciente'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.red.shade700,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: Colors.red.shade100),
+                    child: patient['status'] == 'inactive'
+                      ? ElevatedButton.icon(
+                          onPressed: () async {
+                            await vm.reactivatePatient(patient['id'].toString());
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Paciente reativado!'), backgroundColor: Colors.green),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.restore_rounded),
+                          label: const Text('Reativar Paciente'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF009688),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        )
+                      : TextButton.icon(
+                          onPressed: () => _showDisconnectConfirm(context, patient, vm),
+                          icon: const Icon(Icons.link_off, size: 20),
+                          label: const Text('Desconectar Paciente'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.red.shade700,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(color: Colors.red.shade100),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
                   ),
                   const SizedBox(height: 40),
                 ],

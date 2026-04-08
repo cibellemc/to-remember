@@ -387,6 +387,7 @@ class AuthRepository extends ChangeNotifier {
       final patient = Map<String, dynamic>.from(item['patients']);
       patient['added_at'] = item['added_at'];
       patient['relationship'] = item['relationship'];
+      patient['status'] = item['status'] ?? 'active'; // Included status
       return patient;
     }).toList();
   }
@@ -397,7 +398,25 @@ class AuthRepository extends ChangeNotifier {
 
     await _supabase
         .from('patient_caregivers')
-        .delete()
+        .update({
+          'status': 'inactive',
+          'deactivated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('caregiver_id', user.id)
+        .eq('patient_id', patientId);
+    notifyListeners();
+  }
+
+  Future<void> activatePatient(String patientId) async {
+    final user = currentUser;
+    if (user == null) return;
+
+    await _supabase
+        .from('patient_caregivers')
+        .update({
+          'status': 'active',
+          'reactivated_at': DateTime.now().toIso8601String(),
+        })
         .eq('caregiver_id', user.id)
         .eq('patient_id', patientId);
     notifyListeners();

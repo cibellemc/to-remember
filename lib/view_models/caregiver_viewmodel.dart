@@ -12,6 +12,12 @@ class CaregiverViewModel extends ChangeNotifier {
   List<Map<String, dynamic>> _connectedPatients = [];
   List<Map<String, dynamic>> get connectedPatients => _connectedPatients;
 
+  List<Map<String, dynamic>> get activePatients =>
+      _connectedPatients.where((p) => p['status'] == 'active').toList();
+
+  List<Map<String, dynamic>> get inactivePatients =>
+      _connectedPatients.where((p) => p['status'] == 'inactive').toList();
+
   List<Map<String, dynamic>> _patientCaregivers = [];
   List<Map<String, dynamic>> get patientCaregivers => _patientCaregivers;
 
@@ -28,6 +34,15 @@ class CaregiverViewModel extends ChangeNotifier {
 
     try {
       _connectedPatients = await _authRepository.getConnectedPatients();
+      
+      // Update selected patient to reflect status change
+      if (_selectedPatient != null) {
+        final updated = _connectedPatients.firstWhere(
+          (p) => p['id'] == _selectedPatient!['id'],
+          orElse: () => _selectedPatient!,
+        );
+        _selectedPatient = updated;
+      }
     } catch (e) {
       _errorMessage = 'Erro ao carregar pacientes: $e';
     } finally {
@@ -78,14 +93,26 @@ class CaregiverViewModel extends ChangeNotifier {
 
   Future<void> disconnectFromPatient(String patientId) async {
     _isLoading = true;
-    _errorMessage = null;
     notifyListeners();
-
     try {
       await _authRepository.disconnectPatient(patientId);
       await fetchConnectedPatients();
     } catch (e) {
-      _errorMessage = 'Erro ao desconectar paciente: $e';
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> reactivatePatient(String patientId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _authRepository.activatePatient(patientId);
+      await fetchConnectedPatients();
+    } catch (e) {
+      _errorMessage = e.toString();
     } finally {
       _isLoading = false;
       notifyListeners();

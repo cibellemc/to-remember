@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/services.dart';
 import '../../../view_models/caregiver_viewmodel.dart';
 import '../home/patient_details_page.dart';
 
@@ -24,7 +24,7 @@ class DashboardTab extends StatelessWidget {
               children: [
                 Text(
                   'Olá, ${vm.authRepository.currentUser?.userMetadata?['full_name'] ?? 'Cuidador'}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
@@ -58,13 +58,51 @@ class DashboardTab extends StatelessWidget {
           )
         else if (vm.connectedPatients.isEmpty)
           _buildEmptyState(context, vm, primaryColor)
-        else
-          ...vm.connectedPatients.map(
-            (patient) => _buildPatientCard(context, patient, vm, primaryColor),
-          ),
-        const SizedBox(height: 32),
-        if (vm.connectedPatients.isNotEmpty)
+        else ...[
+          // Monitoramento Ativo
+          if (vm.activePatients.isNotEmpty) ...[
+            const Text(
+              'Monitoramento Ativo',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF475569),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...vm.activePatients.map(
+              (patient) => _buildPatientCard(context, patient, vm, primaryColor),
+            ),
+            const SizedBox(height: 24),
+          ],
+
           _buildAddButton(context, vm, primaryColor),
+
+          // Histórico de Pacientes (Archive)
+          if (vm.inactivePatients.isNotEmpty) ...[
+            const SizedBox(height: 48),
+            const Divider(),
+            const SizedBox(height: 24),
+            const Text(
+              'Histórico de Pacientes',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF64748B),
+              ),
+            ),
+            const Text(
+              'Pacientes com vínculo desativado',
+              style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
+            ),
+            const SizedBox(height: 16),
+            ...vm.inactivePatients.map(
+              (patient) => _buildPatientCard(context, patient, vm, primaryColor,
+                  isInactive: true),
+            ),
+            const SizedBox(height: 32),
+          ],
+        ],
       ],
     );
   }
@@ -161,8 +199,9 @@ class DashboardTab extends StatelessWidget {
     BuildContext context,
     Map<String, dynamic> patient,
     CaregiverViewModel vm,
-    Color primaryColor,
-  ) {
+    Color primaryColor, {
+    bool isInactive = false,
+  }) {
     final name = patient['name'] ?? 'Sem nome';
     final stage = patient['stage'];
     final addedAt = patient['added_at'];
@@ -179,193 +218,222 @@ class DashboardTab extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.05),
+            color: isInactive
+                ? Colors.grey.withOpacity(0.05)
+                : primaryColor.withOpacity(0.05),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            vm.selectPatient(patient);
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ChangeNotifierProvider.value(
-                  value: vm,
-                  child: const PatientDetailsPage(),
-                ),
-              ),
-            );
-          },
-          borderRadius: BorderRadius.circular(24),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Container(
-                  height: 64,
-                  width: 64,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [primaryColor.withOpacity(0.8), primaryColor],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: primaryColor.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+      child: Opacity(
+        opacity: isInactive ? 0.7 : 1.0,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: isInactive
+                ? null
+                : () {
+                    vm.selectPatient(patient);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChangeNotifierProvider.value(
+                          value: vm,
+                          child: const PatientDetailsPage(),
+                        ),
                       ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      name.isNotEmpty ? name[0].toUpperCase() : 'P',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 26,
+                    );
+                  },
+            borderRadius: BorderRadius.circular(24),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Container(
+                    height: 64,
+                    width: 64,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isInactive
+                            ? [Colors.grey.shade400, Colors.grey.shade500]
+                            : [primaryColor.withOpacity(0.8), primaryColor],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: isInactive
+                              ? Colors.grey.withOpacity(0.3)
+                              : primaryColor.withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : 'P',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 26,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 19,
-                                color: Color(0xFF1E293B),
-                              ),
-                            ),
-                          ),
-                          if (isCreator)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE0F2F1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: const Color(
-                                    0xFF009688,
-                                  ).withOpacity(0.3),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 19,
+                                  color: Color(0xFF1E293B),
                                 ),
                               ),
-                              child: const Row(
-                                children: [
-                                  Icon(
-                                    Icons.star,
-                                    color: Color(0xFF009688),
-                                    size: 10,
+                            ),
+                            if (isCreator)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE0F2F1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: const Color(0xFF009688)
+                                        .withOpacity(0.3),
                                   ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Criador',
-                                    style: TextStyle(
-                                      color: Color(0xFF009688),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.star,
+                                        color: Color(0xFF009688), size: 10),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'Criador',
+                                      style: TextStyle(
+                                        color: Color(0xFF009688),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          const SizedBox(width: 8),
-                          if (!isComplete)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFF7ED),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.edit_note_rounded,
-                                    size: 14,
-                                    color: Colors.orange.shade700,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Completar',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.orange.shade800,
-                                      fontWeight: FontWeight.w700,
+                            const SizedBox(width: 8),
+                            if (!isComplete && !isInactive)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFF7ED),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.edit_note_rounded,
+                                      size: 14,
+                                      color: Colors.orange.shade700,
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Completar',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.orange.shade800,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.psychology_rounded,
-                            size: 15,
-                            color: Colors.grey.shade500,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            stage != null
-                                ? 'Alzheimer ${stage[0].toUpperCase() + stage.substring(1)}'
-                                : 'Monitorando',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today_rounded,
-                            size: 14,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Conectado em ${vm.authRepository.formatDateBR(addedAt)}',
-                            style: TextStyle(
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.psychology_rounded,
+                              size: 15,
                               color: Colors.grey.shade500,
-                              fontSize: 12,
                             ),
+                            const SizedBox(width: 6),
+                            Text(
+                              isInactive
+                                  ? 'Monitoramento Pausado'
+                                  : (stage != null
+                                      ? 'Alzheimer ${stage[0].toUpperCase() + stage.substring(1)}'
+                                      : 'Monitorando'),
+                              style: TextStyle(
+                                color: isInactive
+                                    ? Colors.grey.shade500
+                                    : (stage != null
+                                        ? Colors.grey.shade600
+                                        : primaryColor),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (!isInactive) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today_rounded,
+                                size: 14,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Conectado em ${vm.authRepository.formatDateBR(addedAt)}',
+                                style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 16,
-                  color: Colors.grey.shade300,
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  if (isInactive)
+                    TextButton.icon(
+                      onPressed: () =>
+                          vm.reactivatePatient(patient['id'].toString()),
+                      icon: const Icon(Icons.restore_rounded, size: 20),
+                      label: const Text('REATIVAR',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 12)),
+                      style: TextButton.styleFrom(
+                        foregroundColor: primaryColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                    )
+                  else
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 16,
+                      color: Colors.grey.shade300,
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -378,7 +446,7 @@ class DashboardTab extends StatelessWidget {
     CaregiverViewModel vm,
     Color primaryColor,
   ) {
-    int dialogStep = 0; // 0: Code Entry, 1: Selection, 2: Form
+    int dialogStep = 0;
     final codeController = TextEditingController();
     final nameController = TextEditingController();
     final birthdateController = TextEditingController();
@@ -392,8 +460,10 @@ class DashboardTab extends StatelessWidget {
         return Dialog(
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.white,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 440),
             child: ChangeNotifierProvider.value(
@@ -433,13 +503,15 @@ class DashboardTab extends StatelessWidget {
                           vm,
                           primaryColor,
                           patientFromCode,
-                          onCompletarPerfil: () => setDialogState(() => dialogStep = 3),
+                          onCompletarPerfil: () =>
+                              setDialogState(() => dialogStep = 3),
                           onVincularExistente: () {
                             final manualProfiles = vm.connectedPatients
                                 .where((p) => p['auth_id'] == null)
                                 .toList();
                             if (manualProfiles.isEmpty) {
-                              vm.setErrorMessage('Nenhum perfil manual disponível para vincular.');
+                              vm.setErrorMessage(
+                                  'Nenhum perfil manual disponível para vincular.');
                             } else {
                               setDialogState(() => dialogStep = 2);
                             }
@@ -462,7 +534,8 @@ class DashboardTab extends StatelessWidget {
                           nameController,
                           birthdateController,
                           selectedStage,
-                          (stage) => setDialogState(() => selectedStage = stage),
+                          (stage) =>
+                              setDialogState(() => selectedStage = stage),
                         );
                       }
 
@@ -585,74 +658,51 @@ class DashboardTab extends StatelessWidget {
             counterText: "",
             contentPadding: const EdgeInsets.symmetric(vertical: 16),
           ),
+          onChanged: (val) async {
+            if (val.length == 6) {
+              final patient = await vm.getPatientFromCode(val);
+              if (patient != null) {
+                onCodeValidated(patient);
+              } else {
+                vm.setErrorMessage('Código inválido ou expirado.');
+              }
+            }
+          },
         ),
         const SizedBox(height: 24),
-        ElevatedButton(
-          onPressed: vm.isLoading
-              ? null
-              : () async {
-                  if (controller.text.length < 6) {
-                    vm.setErrorMessage('O código deve ter 6 caracteres.');
-                    return;
-                  }
-                  final patient = await vm.getPatientFromCode(controller.text);
-                  if (patient == null) {
-                    vm.setErrorMessage('Código inválido ou expirado.');
-                    return;
-                  }
-
-                  // Se o perfil já estiver completo, vincula direto
-                  if (patient['is_profile_complete'] == true) {
-                    final successResult = await vm.connectToPatient(controller.text);
-                    if (successResult != null && context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Paciente vinculado com sucesso!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
-                  } else {
-                    onCodeValidated(patient);
-                  }
-                },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 0,
-          ),
-          child: vm.isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                )
-              : const Text('Validar Código', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        ),
-        const SizedBox(height: 24),
-        Row(
+        const Row(
           children: [
-            const Expanded(child: Divider()),
+            Expanded(child: Divider()),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'OU',
-                style: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.bold, fontSize: 12),
-              ),
-            ),
-            const Expanded(child: Divider()),
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text('OU',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                        fontWeight: FontWeight.bold))),
+            Expanded(child: Divider()),
           ],
         ),
         const SizedBox(height: 24),
-        _buildOptionCard(
-          icon: Icons.person_add_alt_1_rounded,
-          title: 'Criar novo paciente',
-          subtitle: 'Paciente nunca jogou ou não tem celular próprio',
-          onTap: onManualCreate,
-          primaryColor: primaryColor,
+        OutlinedButton(
+          onPressed: onManualCreate,
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            side: BorderSide(color: primaryColor),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+          child: Text(
+            'CRIAR NOVO PACIENTE',
+            style: TextStyle(
+                color: primaryColor, fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Paciente nunca jogou ou não tem celular próprio',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey, fontSize: 12),
         ),
       ],
     );
@@ -662,113 +712,119 @@ class DashboardTab extends StatelessWidget {
     BuildContext context,
     CaregiverViewModel vm,
     Color primaryColor,
-    Map<String, dynamic>? patientFromCode, {
-    required VoidCallback onCompletarPerfil,
-    required VoidCallback onVincularExistente,
-  }) {
+    Map<String, dynamic>? patient,
+    {required VoidCallback onCompletarPerfil, 
+     required VoidCallback onVincularExistente}
+  ) {
+    if (patient == null) return const SizedBox();
+    
+    final name = patient['name'] ?? 'Paciente';
+    final isComplete = (patient['is_profile_complete'] == true) || 
+                       (patient['name'] != null && patient['stage'] != null);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        RichText(
-          textAlign: TextAlign.center,
-          text: TextSpan(
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: primaryColor.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: primaryColor.withOpacity(0.1)),
+          ),
+          child: Row(
             children: [
-              const TextSpan(text: 'O código pertence a '),
-              TextSpan(
-                text: patientFromCode?['name'] ?? 'Paciente',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+              CircleAvatar(
+                backgroundColor: primaryColor,
+                child: Text(name[0].toUpperCase(), 
+                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
-              const TextSpan(text: '. O que deseja fazer?'),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(isComplete ? 'Perfil Completo' : 'Perfil Incompleto', 
+                         style: TextStyle(fontSize: 12, 
+                                        color: isComplete ? Colors.green : Colors.orange)),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
         const SizedBox(height: 24),
-        _buildOptionCard(
-          icon: Icons.person_add_alt_rounded,
-          title: 'Completar perfil',
-          subtitle: 'Preencher nome, nascimento e estágio',
-          onTap: onCompletarPerfil,
-          primaryColor: primaryColor,
-        ),
-        const SizedBox(height: 16),
-        _buildOptionCard(
-          icon: Icons.group_add_rounded,
-          title: 'Vincular a perfil existente',
-          subtitle: 'Somar a conta de um paciente já cadastrado',
-          onTap: onVincularExistente,
-          primaryColor: primaryColor,
-        ),
+        if (isComplete)
+          _buildConnectionActionCard(
+            title: 'Conectar Agora',
+            subtitle: 'O perfil já está completo. Vincular imediatamente.',
+            icon: Icons.link_rounded,
+            color: primaryColor,
+            onTap: () async {
+              final result = await vm.connectToPatient(patient['connection_code']);
+              if (result != null && context.mounted) Navigator.pop(context);
+            },
+          )
+        else ...[
+          _buildConnectionActionCard(
+            title: 'Vincular a Perfil Existente',
+            subtitle: 'Se você já criou um perfil manual para este paciente.',
+            icon: Icons.merge_type_rounded,
+            color: Colors.blue,
+            onTap: onVincularExistente,
+          ),
+          const SizedBox(height: 12),
+          _buildConnectionActionCard(
+            title: 'Completar novo perfil',
+            subtitle: 'O paciente já joga e deseja manter o seu histórico.',
+            icon: Icons.person_add_alt_1_rounded,
+            color: Colors.orange,
+            onTap: onCompletarPerfil,
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildOptionCard({
-    required IconData icon,
+  Widget _buildConnectionActionCard({
     required String title,
     required String subtitle,
+    required IconData icon,
+    required Color color,
     required VoidCallback onTap,
-    required Color primaryColor,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: primaryColor.withOpacity(0.08),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, size: 28, color: primaryColor),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 17,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          color: Colors.grey.shade500,
-                          fontSize: 13,
-                          height: 1.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: color.withOpacity(0.2)),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
             ),
-          ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: color.withOpacity(0.5)),
+          ],
         ),
       ),
     );
@@ -780,66 +836,34 @@ class DashboardTab extends StatelessWidget {
     Color primaryColor,
     Map<String, dynamic>? patientFromCode,
     String code,
-    VoidCallback onNewSelected,
+    VoidCallback onBackToForm,
   ) {
-    final manualProfiles =
-        vm.connectedPatients.where((p) => p['auth_id'] == null).toList();
+    final manualProfiles = vm.connectedPatients
+        .where((p) => p['auth_id'] == null)
+        .toList();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        RichText(
-          textAlign: TextAlign.center,
-          text: TextSpan(
-            style: const TextStyle(fontSize: 14, color: Colors.blueGrey),
-            children: [
-              const TextSpan(text: 'Deseja somar a conta de '),
-              TextSpan(
-                text: '${patientFromCode?['name'] ?? 'Paciente'}',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
-              ),
-              const TextSpan(text: ' a qual perfil já existente?'),
-            ],
-          ),
+        const Text(
+          'Selecione o perfil manual que deseja vincular a este código.',
+          style: TextStyle(color: Colors.blueGrey, fontSize: 13),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         ...manualProfiles.map((p) => Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.grey.shade200),
-              ),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: primaryColor.withOpacity(0.1),
-                  child: Text(p['name']?[0] ?? 'P', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
-                ),
-                title: Text(p['name'] ?? 'Sem nome', style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: const Text('Selecionar este perfil'),
-                onTap: () async {
-                  final success = await vm.connectToPatient(code, targetPatientId: p['id'].toString());
-                  if (success != null && context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Perfis vinculados com sucesso!')),
-                    );
-                  }
-                },
-              ),
-            )),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: onNewSelected,
-          icon: const Icon(Icons.add),
-          label: const Text('VINCULAR A UM NOVO PERFIL'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: primaryColor,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: CircleAvatar(child: Text(p['name'][0].toUpperCase())),
+            title: Text(p['name']),
+            subtitle: Text('Criado em ${vm.authRepository.formatDateBR(p['added_at'])}'),
+            trailing: const Icon(Icons.link_rounded),
+            onTap: () async {
+              final result = await vm.connectToPatient(code, targetPatientId: p['id'].toString());
+              if (result != null && context.mounted) Navigator.pop(context);
+            },
           ),
-        ),
+        )),
       ],
     );
   }
@@ -851,48 +875,52 @@ class DashboardTab extends StatelessWidget {
     TextEditingController nameController,
     TextEditingController birthdateController,
     String? selectedStage,
-    Function(String?) onStageChanged,
+    Function(String?) onStageSelected,
   ) {
-    const labelStyle = TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blueGrey);
-
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Preencha as informações para completar o prontuário do paciente.',
-          style: TextStyle(color: Colors.blueGrey, fontSize: 14),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 24),
-        const Text('NOME COMPLETO', style: labelStyle),
-        const SizedBox(height: 8),
+        _dialogLabel('NOME COMPLETO'),
         TextField(
           controller: nameController,
-          decoration: _dialogInputDecoration(primaryColor, 'Ex: Maria da Silva'),
-          textCapitalization: TextCapitalization.words,
+          decoration: _dialogInputDecoration(primaryColor, 'Ex: Maria Oliveira'),
         ),
-        const SizedBox(height: 16),
-        const Text('DATA DE NASCIMENTO', style: labelStyle),
-        const SizedBox(height: 8),
+        const SizedBox(height: 20),
+        _dialogLabel('DATA DE NASCIMENTO'),
         TextField(
           controller: birthdateController,
-          decoration: _dialogInputDecoration(primaryColor, 'DD/MM/AAAA'),
           keyboardType: TextInputType.number,
-          inputFormatters: [DateInputFormatter()],
-        ),
-        const SizedBox(height: 16),
-        const Text('ESTÁGIO DO ALZHEIMER', style: labelStyle),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: selectedStage,
-          decoration: _dialogInputDecoration(primaryColor, 'Selecione o estágio'),
-          items: const [
-            DropdownMenuItem(value: 'inicial', child: Text('Inicial')),
-            DropdownMenuItem(value: 'moderado', child: Text('Moderado')),
-            DropdownMenuItem(value: 'avancado', child: Text('Avançado')),
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            _DateInputFormatter(),
           ],
-          onChanged: onStageChanged,
+          decoration: _dialogInputDecoration(primaryColor, '00/00/0000'),
+        ),
+        const SizedBox(height: 20),
+        _dialogLabel('ESTÁGIO DO ALZHEIMER'),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: ['inicial', 'moderado', 'avançado'].map((stage) {
+            final isSelected = selectedStage == stage;
+            return ChoiceChip(
+              label: Text(
+                stage[0].toUpperCase() + stage.substring(1),
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.blueGrey,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              selected: isSelected,
+              selectedColor: primaryColor,
+              backgroundColor: Colors.grey.shade100,
+              onSelected: (val) => onStageSelected(val ? stage : null),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            );
+          }).toList(),
         ),
       ],
     );
@@ -904,24 +932,27 @@ class DashboardTab extends StatelessWidget {
     Color primaryColor,
     int step,
     VoidCallback onBack,
-    VoidCallback onSubmit,
+    Future<void> Function() onSubmit,
   ) {
-    if (step == 0) {
-      return TextButton(
-        onPressed: onBack,
-        child: Text('CANCELAR', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
-      );
-    }
-
     return Row(
       children: [
-        Expanded(
-          child: TextButton(
-            onPressed: vm.isLoading ? null : onBack,
-            child: Text('VOLTAR', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+        if (step > 0)
+          Expanded(
+            child: TextButton(
+              onPressed: vm.isLoading ? null : onBack,
+              child: const Text('Voltar',
+                  style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            ),
           ),
-        ),
-        const SizedBox(width: 16),
+        if (step == 0)
+          Expanded(
+            child: TextButton(
+              onPressed: vm.isLoading ? null : onBack,
+              child: const Text('Cancelar',
+                  style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        const SizedBox(width: 12),
         if (step == 3)
           Expanded(
             flex: 2,
@@ -930,16 +961,51 @@ class DashboardTab extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
               ),
               child: vm.isLoading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('SALVAR', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
+                  : const Text('SALVAR',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
       ],
+    );
+  }
+
+  InputDecoration _dialogInputDecoration(Color color, String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: color, width: 2),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+    );
+  }
+
+  Widget _dialogLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Text(
+        label,
+        style: const TextStyle(
+            fontWeight: FontWeight.bold, fontSize: 12, color: Colors.blueGrey),
+      ),
     );
   }
 
@@ -951,97 +1017,52 @@ class DashboardTab extends StatelessWidget {
     String? stage,
     String birthdate,
   ) async {
-    if (name.trim().isEmpty) {
-      vm.setErrorMessage('O nome é obrigatório.');
-      return;
-    }
-    if (stage == null) {
-      vm.setErrorMessage('Selecione o estágio.');
+    if (name.isEmpty || stage == null || birthdate.length < 10) {
+      vm.setErrorMessage('Por favor, preencha todos os campos corretamente.');
       return;
     }
 
+    dynamic result;
     if (code.isNotEmpty) {
-      final connected = await vm.connectToPatient(code);
-      if (connected != null) {
+      // Completar perfil de paciente existente (vindo de código)
+      result = await vm.connectToPatient(code);
+      if (result != null) {
+        // Agora salva os detalhes através do VM para atualizar o estado
+        final patientId = result['id'].toString();
         await vm.updatePatient(
-          patientId: connected['id'].toString(),
+          patientId: patientId,
           name: name,
-          stage: stage,
           birthdate: birthdate,
+          stage: stage,
           isProfileComplete: true,
         );
-
-        if (vm.errorMessage == null && context.mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Paciente vinculado e prontuário salvo!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
       }
     } else {
-      final patientId = await vm.createNewPatient(
+      // Criar paciente totalmente novo (manual) através do VM
+      result = await vm.createNewPatient(
         name: name,
         stage: stage,
         birthdate: birthdate,
       );
-      if (patientId != null && context.mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Perfil criado com sucesso!')),
-        );
-      }
     }
-  }
 
-  InputDecoration _dialogInputDecoration(Color primaryColor, String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: TextStyle(
-        color: Colors.grey.shade400,
-        fontSize: 14,
-        fontWeight: FontWeight.normal,
-      ),
-      filled: true,
-      fillColor: Colors.grey.shade50,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade100),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: primaryColor, width: 2),
-      ),
-    );
+    if (result != null && context.mounted) {
+      Navigator.pop(context);
+    }
   }
 }
 
-class DateInputFormatter extends TextInputFormatter {
+class _DateInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final newText = newValue.text;
-    if (newText.length < oldValue.text.length) return newValue;
-    var text = newText.replaceAll(RegExp(r'[^0-9]'), '');
-    if (text.length > 8) text = text.substring(0, 8);
-    final buffer = StringBuffer();
-    for (int i = 0; i < text.length; i++) {
-      buffer.write(text[i]);
-      if ((i == 1 || i == 3) && i != text.length - 1) buffer.write('/');
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    var text = newValue.text;
+    if (text.length > oldValue.text.length) {
+      if (text.length == 2 || text.length == 5) text += '/';
     }
-    final formattedText = buffer.toString();
-    return TextEditingValue(
-      text: formattedText,
-      selection: TextSelection.collapsed(offset: formattedText.length),
+    return newValue.copyWith(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }
