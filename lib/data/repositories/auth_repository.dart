@@ -25,6 +25,13 @@ class AuthRepository extends ChangeNotifier {
   StreamSubscription? _caregiverSub;
   StreamSubscription? _codeSub;
   String? _lastSubscribedPatientId;
+  String? _roleOverride;
+  String? _emulatedPatientId;
+  String? get roleOverride => _roleOverride;
+  String? get emulatedPatientId => _emulatedPatientId;
+
+  String? get currentRole => _roleOverride ?? currentUser?.userMetadata?['role'] as String?;
+
 
   Future<void> signInAnonymously({
     required String role,
@@ -161,16 +168,22 @@ class AuthRepository extends ChangeNotifier {
     _connectionCode = null;
     _connectedCaregivers = [];
     _lastSubscribedPatientId = null;
+    _roleOverride = null;
+    _emulatedPatientId = null;
     notifyListeners();
   }
 
   Future<Map<String, dynamic>?> getPatientProfile() async {
     final user = currentUser;
     if (user == null) return null;
+
+    final queryId = _emulatedPatientId ?? user.id;
+    final queryColumn = _emulatedPatientId != null ? 'id' : 'auth_id';
+
     _patientProfile = await _supabase
         .from('patients')
         .select()
-        .eq('auth_id', user.id)
+        .eq(queryColumn, queryId)
         .maybeSingle();
 
     if (_patientProfile != null) {
@@ -426,6 +439,10 @@ class AuthRepository extends ChangeNotifier {
     final user = currentUser;
     if (user == null) return [];
 
+    if (_emulatedPatientId != null) {
+      return getCaregiversForPatient(_emulatedPatientId!);
+    }
+
     final patient = await _supabase
         .from('patients')
         .select('id')
@@ -469,11 +486,14 @@ class AuthRepository extends ChangeNotifier {
     final user = currentUser;
     if (user == null) return;
 
+    final queryId = _emulatedPatientId ?? user.id;
+    final queryColumn = _emulatedPatientId != null ? 'id' : 'auth_id';
+
     // 1. Listen to patient record changes (name, stage, birthdate, etc.)
     _patientSub ??= _supabase
         .from('patients')
         .stream(primaryKey: ['id'])
-        .eq('auth_id', user.id)
+        .eq(queryColumn, queryId)
         .listen((data) {
           if (data.isNotEmpty) {
             _patientProfile = data.first;
@@ -594,6 +614,39 @@ class AuthRepository extends ChangeNotifier {
       return trimmed;
     } catch (e) {
       return trimmed;
+    }
+  }
+
+  // Security PIN and Role Override Methods
+
+  void setRoleOverride(String? role, {String? patientId}) {
+    _roleOverride = role;
+    _emulatedPatientId = patientId;
+    
+    // Clear profile so it can be reloaded for the right context
+    _patientProfile = null;
+    _cancelRealtimeListeners();
+    
+    notifyListeners();
+  }
+
+  Future<void> updateSecurityPin(String pin) async {
+    final user = currentUser;
+    if (user == null) throw Exception('Não autenticado');
+
+    await _supabase.from('profiles').update({'security_pin': pin}).eq('id', user.id);
+  }
+
+  Future<bool> verifySecurityPin(String pin) async {
+    final user = currentUser;
+    if (user == null) return false;
+
+    try {
+      final response = await _supabase.rpc('verify_security_pin', params: {'p_pin': pin});
+      return response as bool;
+    } catch (e) {
+      debugPrint('Error verifying PIN: $e');
+      return false;
     }
   }
 }

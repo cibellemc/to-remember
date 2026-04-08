@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../caregiver/home/caregiver_home_page.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DESIGN TOKENS
@@ -229,9 +230,126 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                 ),
               ),
 
+              if (repo.roleOverride != null)
+                SliverToBoxAdapter(
+                  child: _SectionPadding(
+                    top: 24,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _SectionHeader(
+                          icon: Icons.admin_panel_settings_rounded,
+                          label: 'Modo Gestor',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildSettingsAction(
+                          context,
+                          icon: Icons.settings_backup_restore_rounded,
+                          label: 'Voltar para Visão de Gestor',
+                          color: _T.primaryDark,
+                          onTap: () => _handleSwitchBackToCaregiver(context, repo),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
               const SliverToBoxAdapter(child: SizedBox(height: 40)),
             ],
           ),
+        ),
+      ),
+    );
+  }
+  void _handleSwitchBackToCaregiver(BuildContext context, AuthRepository repo) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar PIN'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Digite seu PIN para voltar para a visão do gestor.'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              maxLength: 4,
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final ok = await repo.verifySecurityPin(controller.text);
+              if (ok) {
+                repo.setRoleOverride(null);
+                // O Consumer no main.dart cuidará de trocar a tela automaticamente
+                if (context.mounted) {
+                  Navigator.pop(context); // Fecha o diálogo do PIN
+                }
+              } else {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('PIN incorreto!')),
+                  );
+                }
+              }
+            },
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsAction(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(_T.radiusCard),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(_T.radiusCard),
+          border: Border.all(color: color.withOpacity(0.1)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, size: 14, color: color.withOpacity(0.5)),
+          ],
         ),
       ),
     );

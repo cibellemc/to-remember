@@ -29,7 +29,7 @@ class ConfigTab extends StatelessWidget {
           icon: Icons.lock_outline,
           title: 'PIN de Segurança',
           subtitle: 'Proteja o acesso ao painel',
-          onTap: () {},
+          onTap: () => _showSetPinDialog(context, authRepo),
         ),
         const SizedBox(height: 12),
         _buildConfigItem(
@@ -91,6 +91,46 @@ class ConfigTab extends StatelessWidget {
           },
         ),
       ],
+    );
+  }
+
+  void _showSetPinDialog(BuildContext context, AuthRepository repo) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Definir PIN de Segurança'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          obscureText: true,
+          maxLength: 4,
+          decoration: const InputDecoration(
+            labelText: 'Novo PIN (4 dígitos)',
+            hintText: 'Ex: 1234',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.length == 4) {
+                await repo.updateSecurityPin(controller.text);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('PIN atualizado com sucesso!')),
+                  );
+                }
+              }
+            },
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
     );
   }
 

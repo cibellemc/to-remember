@@ -28,18 +28,26 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authRepository = AuthRepository(Supabase.instance.client);
-
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<AuthRepository>.value(value: authRepository),
-        ChangeNotifierProvider(create: (_) => LoginViewModel(authRepository)),
+        ChangeNotifierProvider(create: (_) => AuthRepository(Supabase.instance.client)),
+        ProxyProvider<AuthRepository, LoginViewModel>(
+          update: (_, auth, __) => LoginViewModel(auth),
+        ),
       ],
-      child: MaterialApp(
-        title: 'ToRemember',
-        theme: AppTheme.theme,
-        debugShowCheckedModeBanner: false,
-        home: _resolveHome(authRepository),
+      child: Consumer<AuthRepository>(
+        builder: (context, authRepo, _) {
+          final role = authRepo.currentRole ?? 'none';
+          final user = authRepo.currentUser?.id ?? 'none';
+          
+          return MaterialApp(
+            key: ValueKey('app_$role\_$user'),
+            title: 'ToRemember',
+            theme: AppTheme.theme,
+            debugShowCheckedModeBanner: false,
+            home: _resolveHome(authRepo),
+          );
+        },
       ),
     );
   }
@@ -48,7 +56,7 @@ class MyApp extends StatelessWidget {
     final user = repo.currentUser;
     if (user == null) return const OnboardingPage();
 
-    final role = user.userMetadata?['role'] as String?;
+    final role = repo.currentRole;
     if (role == 'caregiver') return const CaregiverHomePage();
     return const PatientHomePage();
   }
