@@ -36,13 +36,13 @@ class CaregiverViewModel extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>?> connectToPatient(String code) async {
+  Future<Map<String, dynamic>?> connectToPatient(String code, {String? targetPatientId}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final patient = await _authRepository.connectWithCode(code);
+      final patient = await _authRepository.connectWithCode(code, targetPatientId: targetPatientId);
       await fetchConnectedPatients();
       return patient;
     } catch (e) {

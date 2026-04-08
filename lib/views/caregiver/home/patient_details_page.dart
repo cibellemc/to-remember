@@ -120,7 +120,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
   ) {
     final nameController = TextEditingController(text: patient['name']);
     final birthdateController = TextEditingController(
-      text: vm.authRepository.formatDateBR(patient['birthdate'] ?? patient['birth_date'])
+      text: vm.authRepository.formatDateBR(patient['birth_date'])
     );
     String? selectedStage = patient['stage'];
 

@@ -87,7 +87,9 @@ class AuthRepository extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> ensureProfileAndPatientRecord(Map<String, dynamic> metadata) async {
+  Future<void> ensureProfileAndPatientRecord(
+    Map<String, dynamic> metadata,
+  ) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Usuário não autenticado');
 
@@ -117,12 +119,17 @@ class AuthRepository extends ChangeNotifier {
         if (existingLink == null) {
           // Caregivers can create patients if RLS allows authenticated users to insert.
           // We ensure auth_id is not set to the caregiver's ID here.
-          final patientResponse = await _supabase.from('patients').insert({
-            'name': patientName,
-            'stage': metadata['patient_stage'],
-            'birthdate': _tryFormatDate(metadata['patient_birthdate']),
-            'auth_id': null, // Explicitly null for caregiver-created patients
-          }).select('id').single();
+          final patientResponse = await _supabase
+              .from('patients')
+              .insert({
+                'name': patientName,
+                'stage': metadata['patient_stage'],
+                'birth_date': _tryFormatDate(metadata['patient_birthdate']),
+                'auth_id':
+                    null, // Explicitly null for caregiver-created patients
+              })
+              .select('id')
+              .single();
 
           final patientId = patientResponse['id'];
 
@@ -248,14 +255,18 @@ class AuthRepository extends ChangeNotifier {
     final user = currentUser;
     if (user == null) throw Exception('Não autenticado');
 
-    final response = await _supabase.from('patients').insert({
-      'name': name,
-      'stage': stage,
-      'birth_date': _tryFormatDate(birthdate),
-      'auth_id': null, // Caregiver created patient
-      'created_by': user.id,
-      'is_profile_complete': (name.isNotEmpty && stage != null),
-    }).select('id').single();
+    final response = await _supabase
+        .from('patients')
+        .insert({
+          'name': name,
+          'stage': stage,
+          'birth_date': _tryFormatDate(birthdate),
+          'auth_id': null, // Caregiver created patient
+          'created_by': user.id,
+          'is_profile_complete': (name.isNotEmpty && stage != null),
+        })
+        .select('id')
+        .single();
 
     final patientId = response['id'].toString();
 
@@ -278,19 +289,16 @@ class AuthRepository extends ChangeNotifier {
 
     // Automatically set profile complete if name and stage exist
     if (data.containsKey('name') || data.containsKey('stage')) {
-       // We don't have the full record here, but we can peek or let the trigger handle it.
-       // For now, if both are set in the update, we can mark it.
-       // However, a safer way is to let the dashboard check the fields.
-       // But let's check if we have enough to mark it.
-       if (data['name'] != null && data['stage'] != null) {
-         data['is_profile_complete'] = true;
-       }
+      // We don't have the full record here, but we can peek or let the trigger handle it.
+      // For now, if both are set in the update, we can mark it.
+      // However, a safer way is to let the dashboard check the fields.
+      // But let's check if we have enough to mark it.
+      if (data['name'] != null && data['stage'] != null) {
+        data['is_profile_complete'] = true;
+      }
     }
 
-    await _supabase
-        .from('patients')
-        .update(data)
-        .eq('id', patientId);
+    await _supabase.from('patients').update(data).eq('id', patientId);
 
     // Refresh local state if it's the current patient
     if (_patientProfile != null && _patientProfile!['id'] == patientId) {
@@ -300,41 +308,38 @@ class AuthRepository extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>?> getPatientFromCode(String code) async {
+    final sanitizedCode = code.trim().toUpperCase().replaceAll(' ', '');
     try {
-      final codeData = await _supabase
-          .from('connection_codes')
-          .select('patient_id, used_at, expires_at')
-          .eq('code', code.toUpperCase())
-          .maybeSingle();
+      final response = await _supabase.rpc(
+        'get_patient_by_code',
+        params: {'p_code': sanitizedCode},
+      ).maybeSingle();
 
-      if (codeData == null) return null;
-      if (codeData['used_at'] != null) return null;
-      
-      final expiresAt = DateTime.parse(codeData['expires_at']);
-      if (expiresAt.isBefore(DateTime.now().toUtc())) return null;
-
-      final patientId = codeData['patient_id'];
-      if (patientId == null) return null;
-
-      return await _supabase
-          .from('patients')
-          .select('*')
-          .eq('id', patientId)
-          .single();
+      if (response == null) return null;
+      return Map<String, dynamic>.from(response);
     } catch (e) {
       debugPrint('Error getting patient from code: $e');
       return null;
     }
   }
 
-  Future<Map<String, dynamic>?> connectWithCode(String code) async {
+  Future<Map<String, dynamic>?> connectWithCode(
+    String code, {
+    String? targetPatientId,
+  }) async {
     final user = currentUser;
     if (user == null) throw Exception('Usuário não autenticado');
 
     try {
+      final sanitizedCode = code.trim().toUpperCase().replaceAll(' ', '');
+      final params = {
+        'p_code': sanitizedCode,
+        'p_target_patient_id': targetPatientId,
+      };
+
       final response = await _supabase.rpc(
         'consume_connection_code',
-        params: {'p_code': code.trim().toUpperCase()},
+        params: params,
       );
 
       final result = Map<String, dynamic>.from(response);
@@ -343,22 +348,18 @@ class AuthRepository extends ChangeNotifier {
         throw Exception(result['message'] ?? 'Falha ao consumir código');
       }
 
-      // If we linked to a patient, return their record
-      if (result['type'] == 'patient_linked' && result['patient_id'] != null) {
+      // Return patient record for both link types (as long as we have a patientId)
+      if ((result['type'] == 'patient_linked' || result['type'] == 'caregiver_linked') && 
+          result['patient_id'] != null) {
         final patientId = result['patient_id'].toString();
         final patientResponse = await _supabase
             .from('patients')
             .select()
             .eq('id', patientId)
             .single();
-        
+
         notifyListeners();
         return patientResponse;
-      }
-
-      // If the user IS the patient and linked to a caregiver
-      if (result['type'] == 'caregiver_linked') {
-        await getConnectedCaregivers();
       }
 
       notifyListeners();
@@ -417,7 +418,9 @@ class AuthRepository extends ChangeNotifier {
     return getCaregiversForPatient(patient['id'].toString());
   }
 
-  Future<List<Map<String, dynamic>>> getCaregiversForPatient(String patientId) async {
+  Future<List<Map<String, dynamic>>> getCaregiversForPatient(
+    String patientId,
+  ) async {
     final response = await _supabase
         .from('patient_caregivers')
         .select('*, profiles (*)')
@@ -426,18 +429,20 @@ class AuthRepository extends ChangeNotifier {
     final List<dynamic> data = response;
     final list = data.map((item) {
       final profile = Map<String, dynamic>.from(item['profiles']);
+      // Normalize name for UI consistency
+      profile['name'] = profile['full_name'];
       profile['added_at'] = item['added_at'];
       profile['relationship'] = item['relationship'];
       profile['is_admin'] = item['is_admin'];
       return profile;
     }).toList();
-    
+
     // If we're updating for the current patient profile, update the local state
     if (_patientProfile != null && _patientProfile!['id'] == patientId) {
       _connectedCaregivers = list;
       notifyListeners();
     }
-    
+
     return list;
   }
 
@@ -454,13 +459,17 @@ class AuthRepository extends ChangeNotifier {
           if (data.isNotEmpty) {
             _patientProfile = data.first;
             notifyListeners();
-            
+
             // If we now have a patient ID, setup the caregiver listener
             final patientId = _patientProfile!['id'].toString();
             if (patientId != _lastSubscribedPatientId) {
-               _setupCaregiverListener(patientId);
-               _setupCodeListener(patientId);
+              _setupCaregiverListener(patientId);
+              _setupCodeListener(patientId);
             }
+          } else {
+            // Se o dado sumiu, pode ter sido um merge (deletou o temporário).
+            // Tentamos recarregar para ver se encontramos o novo registro vinculado ao auth_id.
+            getPatientProfile();
           }
         });
   }
@@ -468,11 +477,11 @@ class AuthRepository extends ChangeNotifier {
   void _setupCaregiverListener(String patientId) {
     _caregiverSub?.cancel();
     _lastSubscribedPatientId = patientId;
-    
+
     // 2. Listen to links with caregivers
     _caregiverSub = _supabase
         .from('patient_caregivers')
-        .stream(primaryKey: ['id'])
+        .stream(primaryKey: ['patient_id', 'caregiver_id'])
         .eq('patient_id', patientId)
         .listen((_) async {
           // When a new link is added or removed, refresh the caregiver list
@@ -489,9 +498,13 @@ class AuthRepository extends ChangeNotifier {
         .listen((data) {
           if (data.isNotEmpty) {
             // Find the latest active code
-            final activeCodes = data.where((c) => c['used_at'] == null).toList();
+            final activeCodes = data
+                .where((c) => c['used_at'] == null)
+                .toList();
             if (activeCodes.isNotEmpty) {
-              activeCodes.sort((a, b) => b['created_at'].compareTo(a['created_at']));
+              activeCodes.sort(
+                (a, b) => b['created_at'].compareTo(a['created_at']),
+              );
               _connectionCode = activeCodes.first['code'];
               notifyListeners();
             }
@@ -551,12 +564,12 @@ class AuthRepository extends ChangeNotifier {
         // Ensure 2 digits for day/month and 4 for year
         if (day.length == 1) day = '0$day';
         if (month.length == 1) month = '0$month';
-        
+
         // If year is the first part (YYYY/MM/DD)
         if (day.length == 4) {
           return '$day-$month-$year';
         }
-        
+
         return '$year-$month-$day';
       }
       return trimmed;
