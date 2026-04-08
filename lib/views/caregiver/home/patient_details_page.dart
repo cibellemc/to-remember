@@ -11,43 +11,10 @@ class PatientDetailsPage extends StatefulWidget {
 }
 
 class _PatientDetailsPageState extends State<PatientDetailsPage> {
-  String? _connectionCode;
-  bool _isLoadingCode = false;
-
   @override
   void initState() {
     super.initState();
-    _loadCode();
-  }
-
-  Future<void> _loadCode() async {
-    final vm = context.read<CaregiverViewModel>();
-    final patient = vm.selectedPatient;
-    if (patient == null) return;
-
-    setState(() => _isLoadingCode = true);
-    final code = await vm.getActiveCodeForPatient(patient['id'].toString());
-    if (mounted) {
-      setState(() {
-        _connectionCode = code;
-        _isLoadingCode = false;
-      });
-    }
-  }
-
-  Future<void> _refreshCode() async {
-    final vm = context.read<CaregiverViewModel>();
-    final patient = vm.selectedPatient;
-    if (patient == null) return;
-
-    setState(() => _isLoadingCode = true);
-    final code = await vm.refreshCodeForPatient(patient['id'].toString());
-    if (mounted) {
-      setState(() {
-        _connectionCode = code;
-        _isLoadingCode = false;
-      });
-    }
+    // Codes are no longer managed here
   }
 
   String _formatStage(dynamic stage) {
@@ -407,88 +374,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Connection Code Section
-                  const Text(
-                    'Código de Vínculo',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Use este código para conectar outros cuidadores.',
-                    style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
-                  ),
                   const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFE4E4E7)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (_isLoadingCode)
-                              const CircularProgressIndicator()
-                            else
-                              Text(
-                                _connectionCode ?? '------',
-                                style: const TextStyle(
-                                  fontSize: 42,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 10,
-                                  color: Color(0xFF009688),
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            ElevatedButton.icon(
-                              onPressed: _connectionCode == null ? null : () {
-                                Clipboard.setData(ClipboardData(text: _connectionCode!));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Código copiado!')),
-                                );
-                              },
-                              icon: const Icon(Icons.copy_rounded, size: 18),
-                              label: const Text('Copiar'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFF1F5F9),
-                                foregroundColor: const Color(0xFF475569),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            TextButton.icon(
-                              onPressed: _isLoadingCode ? null : _refreshCode,
-                              icon: const Icon(Icons.refresh_rounded, size: 18),
-                              label: const Text('Novo Código'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: const Color(0xFF009688),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
 
                   const SizedBox(height: 32),
 
