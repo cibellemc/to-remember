@@ -717,19 +717,41 @@ class _CaregiverTile extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: _T.connectedBg,
-              borderRadius: BorderRadius.circular(_T.radiusPill),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.check_circle_rounded, size: 13, color: _T.connected),
-                SizedBox(width: 4),
-                Text('Ativo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _T.connected)),
-              ],
+          _CaregiverStatusBadge(status: caregiver['status'] ?? 'active'),
+        ],
+      ),
+    );
+  }
+}
+
+class _CaregiverStatusBadge extends StatelessWidget {
+  final String status;
+  const _CaregiverStatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = status == 'active';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: isActive ? _T.connectedBg : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(_T.radiusPill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isActive ? Icons.check_circle_rounded : Icons.pause_circle_filled_rounded,
+            size: 13,
+            color: isActive ? _T.connected : Colors.grey.shade600,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            isActive ? 'Ativo' : 'Pausado',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: isActive ? _T.connected : Colors.grey.shade600,
             ),
           ),
         ],

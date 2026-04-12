@@ -114,7 +114,9 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                 controller: birthdateController,
                 decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'DD/MM/YYYY'),
                 keyboardType: TextInputType.number,
-                inputFormatters: [DateInputFormatter()],
+                inputFormatters: [
+                  DateInputFormatter(),
+                ],
               ),
               const SizedBox(height: 16),
               const Text('Estágio do Alzheimer', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -566,10 +568,9 @@ class DateInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    var text = newValue.text;
-    if (text.length < oldValue.text.length) return newValue;
-    text = text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (text.length > 8) text = text.substring(0, 8);
+    if (newValue.text.length < oldValue.text.length) return newValue;
+    final text = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (text.length > 8) return oldValue;
     final buffer = StringBuffer();
     for (int i = 0; i < text.length; i++) {
       buffer.write(text[i]);

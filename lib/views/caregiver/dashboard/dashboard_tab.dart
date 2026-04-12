@@ -897,7 +897,6 @@ class DashboardTab extends StatelessWidget {
           controller: birthdateController,
           keyboardType: TextInputType.number,
           inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
             _DateInputFormatter(),
           ],
           decoration: _dialogInputDecoration(primaryColor, '00/00/0000'),
@@ -908,11 +907,15 @@ class DashboardTab extends StatelessWidget {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: ['inicial', 'moderado', 'avançado'].map((stage) {
-            final isSelected = selectedStage == stage;
+          children: [
+            {'value': 'inicial', 'label': 'Inicial'},
+            {'value': 'moderado', 'label': 'Moderado'},
+            {'value': 'avancado', 'label': 'Avançado'},
+          ].map((s) {
+            final isSelected = selectedStage == s['value'];
             return ChoiceChip(
               label: Text(
-                stage[0].toUpperCase() + stage.substring(1),
+                s['label']!,
                 style: TextStyle(
                   color: isSelected ? Colors.white : Colors.blueGrey,
                   fontWeight: FontWeight.bold,
@@ -921,7 +924,7 @@ class DashboardTab extends StatelessWidget {
               selected: isSelected,
               selectedColor: primaryColor,
               backgroundColor: Colors.grey.shade100,
-              onSelected: (val) => onStageSelected(val ? stage : null),
+              onSelected: (val) => onStageSelected(val ? s['value'] : null),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
             );
@@ -1051,7 +1054,8 @@ class DashboardTab extends StatelessWidget {
       );
     }
 
-    if (result != null && context.mounted) {
+    // Only close if we have a result AND no error occurred during secondary updates
+    if (result != null && vm.errorMessage == null && context.mounted) {
       Navigator.pop(context);
     }
   }
@@ -1061,13 +1065,18 @@ class _DateInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
       TextEditingValue oldValue, TextEditingValue newValue) {
-    var text = newValue.text;
-    if (text.length > oldValue.text.length) {
-      if (text.length == 2 || text.length == 5) text += '/';
+    if (newValue.text.length < oldValue.text.length) return newValue;
+    final text = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (text.length > 8) return oldValue;
+    final buffer = StringBuffer();
+    for (int i = 0; i < text.length; i++) {
+      buffer.write(text[i]);
+      if ((i == 1 || i == 3) && i != text.length - 1) buffer.write('/');
     }
-    return newValue.copyWith(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
+    final formatted = buffer.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

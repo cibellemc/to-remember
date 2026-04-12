@@ -470,6 +470,7 @@ class AuthRepository extends ChangeNotifier {
       profile['added_at'] = item['added_at'];
       profile['relationship'] = item['relationship'];
       profile['is_admin'] = item['is_admin'];
+      profile['status'] = item['status'] ?? 'active';
       return profile;
     }).toList();
 
