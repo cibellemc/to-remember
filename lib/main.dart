@@ -31,8 +31,8 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthRepository(Supabase.instance.client)),
-        ProxyProvider<AuthRepository, LoginViewModel>(
-          update: (_, auth, __) => LoginViewModel(auth),
+        ChangeNotifierProvider(
+          create: (context) => LoginViewModel(context.read<AuthRepository>()),
         ),
       ],
       child: Consumer<AuthRepository>(

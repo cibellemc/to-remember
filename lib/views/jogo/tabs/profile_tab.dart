@@ -263,49 +263,107 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
   }
   void _handleSwitchBackToCaregiver(BuildContext context, AuthRepository repo) {
     final controller = TextEditingController();
+    String? errorMessage;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmar PIN'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Digite seu PIN para voltar para a visão do gestor.'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              obscureText: true,
-              maxLength: 4,
-              autofocus: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_T.radiusCard)),
+            title: const Text(
+              'Confirmar PIN',
+              style: TextStyle(fontWeight: FontWeight.w800, color: _T.textPrimary),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final ok = await repo.verifySecurityPin(controller.text);
-              if (ok) {
-                repo.setRoleOverride(null);
-                // O Consumer no main.dart cuidará de trocar a tela automaticamente
-                if (context.mounted) {
-                  Navigator.pop(context); // Fecha o diálogo do PIN
-                }
-              } else {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('PIN incorreto!')),
-                  );
-                }
-              }
-            },
-            child: const Text('Confirmar'),
-          ),
-        ],
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Digite seu PIN para voltar para a visão do gestor.',
+                  style: TextStyle(color: _T.textSecondary, fontSize: 15),
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: controller,
+                  keyboardType: TextInputType.number,
+                  obscureText: true,
+                  maxLength: 4,
+                  autofocus: true,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8),
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  onChanged: (_) {
+                    if (errorMessage != null) {
+                      setState(() => errorMessage = null);
+                    }
+                  },
+                  decoration: InputDecoration(
+                    counterText: '',
+                    hintText: '••••',
+                    hintStyle: TextStyle(color: Colors.grey.shade300, letterSpacing: 8),
+                    errorText: errorMessage,
+                    errorStyle: const TextStyle(fontWeight: FontWeight.w600),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: _T.primary, width: 2),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(foregroundColor: _T.textSecondary),
+                child: const Text('Cancelar', style: TextStyle(fontWeight: FontWeight.w600)),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () async {
+                  if (controller.text.length < 4) return;
+                  
+                  final ok = await repo.verifySecurityPin(controller.text);
+                  if (ok) {
+                    repo.setRoleOverride(null);
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
+                  } else {
+                    setState(() {
+                      errorMessage = 'PIN incorreto!';
+                      controller.clear();
+                    });
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _T.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Confirmar', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
