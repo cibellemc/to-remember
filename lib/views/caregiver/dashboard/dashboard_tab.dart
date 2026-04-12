@@ -453,6 +453,7 @@ class DashboardTab extends StatelessWidget {
   ) {
     int dialogStep = 0;
     final codeController = TextEditingController();
+    final suffixController = TextEditingController();
     final nameController = TextEditingController();
     final birthdateController = TextEditingController();
     String? selectedStage;
@@ -493,12 +494,14 @@ class DashboardTab extends StatelessWidget {
                           vm,
                           primaryColor,
                           codeController,
+                          suffixController,
                           (patient) {
                             patientFromCode = patient;
                             setDialogState(() => dialogStep = 1);
                           },
                           onManualCreate: () {
                             codeController.clear();
+                            suffixController.clear();
                             setDialogState(() => dialogStep = 3);
                           },
                         );
@@ -508,6 +511,8 @@ class DashboardTab extends StatelessWidget {
                           vm,
                           primaryColor,
                           patientFromCode,
+                          codeController,
+                          suffixController,
                           onCompletarPerfil: () =>
                               setDialogState(() => dialogStep = 3),
                           onVincularExistente: () {
@@ -529,6 +534,7 @@ class DashboardTab extends StatelessWidget {
                           primaryColor,
                           patientFromCode,
                           codeController.text,
+                          suffixController.text,
                           () => setDialogState(() => dialogStep = 3),
                         );
                       } else {
@@ -584,6 +590,7 @@ class DashboardTab extends StatelessWidget {
                                     context,
                                     vm,
                                     codeController.text,
+                                    suffixController.text,
                                     nameController.text,
                                     selectedStage,
                                     birthdateController.text,
@@ -633,7 +640,8 @@ class DashboardTab extends StatelessWidget {
     BuildContext context,
     CaregiverViewModel vm,
     Color primaryColor,
-    TextEditingController controller,
+    TextEditingController codeController,
+    TextEditingController suffixController,
     Function(Map<String, dynamic>) onCodeValidated, {
     required VoidCallback onManualCreate,
   }) {
@@ -642,37 +650,91 @@ class DashboardTab extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          'Insira o código gerado no celular do paciente para vincular as contas.',
+          'Insira o Código de Vínculo e o Sufixo do Paciente (#xxxx) para continuar.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.blueGrey, fontSize: 14),
+          style: TextStyle(color: Colors.blueGrey, fontSize: 13),
         ),
         const SizedBox(height: 24),
-        TextField(
-          controller: controller,
-          maxLength: 6,
-          textAlign: TextAlign.center,
-          keyboardType: TextInputType.text,
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 8,
-            color: primaryColor,
-          ),
-          textCapitalization: TextCapitalization.characters,
-          decoration: _dialogInputDecoration(primaryColor, 'CODE6').copyWith(
-            counterText: "",
-            contentPadding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-          onChanged: (val) async {
-            if (val.length == 6) {
-              final patient = await vm.getPatientFromCode(val);
-              if (patient != null) {
-                onCodeValidated(patient);
-              } else {
-                vm.setErrorMessage('Código inválido ou expirado.');
-              }
-            }
-          },
+        Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Código de Vínculo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: codeController,
+                    maxLength: 6,
+                    textAlign: TextAlign.center,
+                    keyboardType: TextInputType.text,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 4,
+                      color: primaryColor,
+                    ),
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: _dialogInputDecoration(primaryColor, 'ABCDEF').copyWith(
+                      counterText: "",
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onChanged: (val) async {
+                      if (val.length == 6 && suffixController.text.length == 4) {
+                        final patient = await vm.getPatientFromCode(val, suffixController.text);
+                        if (patient != null) {
+                          onCodeValidated(patient);
+                        } else {
+                          vm.setErrorMessage('Código ou sufixo inválidos.');
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Sufixo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: suffixController,
+                    maxLength: 4,
+                    textAlign: TextAlign.center,
+                    keyboardType: TextInputType.number,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                      color: Colors.blueGrey,
+                    ),
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: _dialogInputDecoration(Colors.blueGrey, '1234').copyWith(
+                      counterText: "",
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      prefixText: '#',
+                      prefixStyle: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    onChanged: (val) async {
+                      if (val.length == 4 && codeController.text.length == 6) {
+                        final patient = await vm.getPatientFromCode(codeController.text, val);
+                        if (patient != null) {
+                          onCodeValidated(patient);
+                        } else {
+                          vm.setErrorMessage('Código ou sufixo inválidos.');
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 24),
         const Row(
@@ -718,6 +780,8 @@ class DashboardTab extends StatelessWidget {
     CaregiverViewModel vm,
     Color primaryColor,
     Map<String, dynamic>? patient,
+    TextEditingController codeController,
+    TextEditingController suffixController,
     {required VoidCallback onCompletarPerfil, 
      required VoidCallback onVincularExistente}
   ) {
@@ -767,7 +831,7 @@ class DashboardTab extends StatelessWidget {
             icon: Icons.link_rounded,
             color: primaryColor,
             onTap: () async {
-              final result = await vm.connectToPatient(patient['connection_code']);
+              final result = await vm.connectToPatient(patient['connection_code'] ?? codeController.text, suffixController.text);
               if (result != null && context.mounted) Navigator.pop(context);
             },
           )
@@ -841,6 +905,7 @@ class DashboardTab extends StatelessWidget {
     Color primaryColor,
     Map<String, dynamic>? patientFromCode,
     String code,
+    String suffix,
     VoidCallback onBackToForm,
   ) {
     final manualProfiles = vm.connectedPatients
@@ -864,7 +929,7 @@ class DashboardTab extends StatelessWidget {
             subtitle: Text('Criado em ${vm.authRepository.formatDateBR(p['added_at'])}'),
             trailing: const Icon(Icons.link_rounded),
             onTap: () async {
-              final result = await vm.connectToPatient(code, targetPatientId: p['id'].toString());
+              final result = await vm.connectToPatient(code, suffix, targetPatientId: p['id'].toString());
               if (result != null && context.mounted) Navigator.pop(context);
             },
           ),
@@ -1021,6 +1086,7 @@ class DashboardTab extends StatelessWidget {
     BuildContext context,
     CaregiverViewModel vm,
     String code,
+    String suffix,
     String name,
     String? stage,
     String birthdate,
@@ -1033,7 +1099,7 @@ class DashboardTab extends StatelessWidget {
     dynamic result;
     if (code.isNotEmpty) {
       // Completar perfil de paciente existente (vindo de código)
-      result = await vm.connectToPatient(code);
+      result = await vm.connectToPatient(code, suffix);
       if (result != null) {
         // Agora salva os detalhes através do VM para atualizar o estado
         final patientId = result['id'].toString();

@@ -63,9 +63,17 @@ class AuthRepository extends ChangeNotifier {
             .maybeSingle();
 
         if (existing == null) {
+          // Extract suffix from name if it follows the pattern "#1234"
+          String? suffix;
+          final match = RegExp(r'#(\d{4})').firstMatch(fullName);
+          if (match != null) {
+            suffix = match.group(1);
+          }
+
           await _supabase.from('patients').insert({
             'name': fullName,
             'auth_id': user.id,
+            'linking_suffix': suffix,
           });
         }
         await getPatientProfile();
@@ -320,12 +328,15 @@ class AuthRepository extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>?> getPatientFromCode(String code) async {
+  Future<Map<String, dynamic>?> getPatientFromCode(String code, String suffix) async {
     final sanitizedCode = code.trim().toUpperCase().replaceAll(' ', '');
     try {
       final response = await _supabase.rpc(
         'get_patient_by_code',
-        params: {'p_code': sanitizedCode},
+        params: {
+          'p_code': sanitizedCode,
+          'p_patient_suffix': suffix.trim(),
+        },
       ).maybeSingle();
 
       if (response == null) return null;
@@ -338,6 +349,7 @@ class AuthRepository extends ChangeNotifier {
 
   Future<Map<String, dynamic>?> connectWithCode(
     String code, {
+    required String patientSuffix,
     String? targetPatientId,
   }) async {
     final user = currentUser;
@@ -347,6 +359,7 @@ class AuthRepository extends ChangeNotifier {
       final sanitizedCode = code.trim().toUpperCase().replaceAll(' ', '');
       final params = {
         'p_code': sanitizedCode,
+        'p_patient_suffix': patientSuffix.trim(),
         'p_target_patient_id': targetPatientId,
       };
 
@@ -531,23 +544,36 @@ class AuthRepository extends ChangeNotifier {
 
   void _setupCodeListener(String patientId) {
     _codeSub?.cancel();
+    // NOTE: connection_codes uses 'code' as primary key (not 'id')
     _codeSub = _supabase
         .from('connection_codes')
-        .stream(primaryKey: ['id'])
+        .stream(primaryKey: ['code'])
         .eq('patient_id', patientId)
-        .listen((data) {
+        .listen((data) async {
           if (data.isNotEmpty) {
-            // Find the latest active code
-            final activeCodes = data
-                .where((c) => c['used_at'] == null)
-                .toList();
+            // Find the latest active (unused, non-expired) code
+            final now = DateTime.now().toUtc();
+            final activeCodes = data.where((c) {
+              if (c['used_at'] != null) return false;
+              final expiresAt = c['expires_at'];
+              if (expiresAt == null) return true;
+              return DateTime.tryParse(expiresAt.toString())?.isAfter(now) ?? false;
+            }).toList();
+
             if (activeCodes.isNotEmpty) {
               activeCodes.sort(
                 (a, b) => b['created_at'].compareTo(a['created_at']),
               );
               _connectionCode = activeCodes.first['code'];
               notifyListeners();
+            } else {
+              // All visible codes are used — the new rotated code may not have
+              // arrived in the stream yet. Do a fresh DB fetch to pick it up.
+              await getActiveCodeForPatient(patientId);
             }
+          } else {
+            // No codes in stream at all — fetch from DB
+            await getActiveCodeForPatient(patientId);
           }
         });
   }

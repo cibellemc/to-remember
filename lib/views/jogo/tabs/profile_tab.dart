@@ -193,9 +193,10 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                         const SizedBox(height: 16),
                         _CompactCodeCard(
                           code: repo.connectionCode ?? '------',
+                          suffix: profile?['linking_suffix'] ?? '----',
                           onCopy: () {
                             if (repo.connectionCode != null) {
-                              _copyCode(repo.connectionCode!);
+                              _copyCode('${repo.connectionCode} #${profile?['linking_suffix'] ?? ''}');
                             }
                           },
                         ),
@@ -587,11 +588,16 @@ class _EmptyConnectionsBanner extends StatelessWidget {
 
 
 
-class _CompactCodeCard extends StatelessWidget {
+ class _CompactCodeCard extends StatelessWidget {
   final String code;
+  final String suffix;
   final VoidCallback onCopy;
 
-  const _CompactCodeCard({required this.code, required this.onCopy});
+  const _CompactCodeCard({
+    required this.code,
+    required this.suffix,
+    required this.onCopy,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -615,9 +621,25 @@ class _CompactCodeCard extends StatelessWidget {
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _T.textSecondary, letterSpacing: 0.5),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  code,
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _T.primaryDark, letterSpacing: 4),
+                Row(
+                  children: [
+                    Text(
+                      code,
+                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _T.primaryDark, letterSpacing: 4),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _T.primaryDark.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '#$suffix',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _T.primaryDark),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

@@ -51,13 +51,17 @@ class CaregiverViewModel extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>?> connectToPatient(String code, {String? targetPatientId}) async {
+  Future<Map<String, dynamic>?> connectToPatient(String code, String suffix, {String? targetPatientId}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final patient = await _authRepository.connectWithCode(code, targetPatientId: targetPatientId);
+      final patient = await _authRepository.connectWithCode(
+        code, 
+        patientSuffix: suffix,
+        targetPatientId: targetPatientId,
+      );
       await fetchConnectedPatients();
       return patient;
     } catch (e) {
@@ -169,8 +173,8 @@ class CaregiverViewModel extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>?> getPatientFromCode(String code) async {
-    return _authRepository.getPatientFromCode(code);
+  Future<Map<String, dynamic>?> getPatientFromCode(String code, String suffix) async {
+    return _authRepository.getPatientFromCode(code, suffix);
   }
 
   Future<void> updatePatient({

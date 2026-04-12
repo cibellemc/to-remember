@@ -334,7 +334,7 @@ class LoginViewModel extends ChangeNotifier {
         if (currentUser == null) {
           String displayName = _name.trim();
           if (displayName.isEmpty) {
-            displayName = 'Paciente #${Random().nextInt(9999)}';
+            displayName = 'Paciente #${Random().nextInt(10000).toString().padLeft(4, '0')}';
           }
           await _authRepository.signInAnonymously(
             role: 'patient',
