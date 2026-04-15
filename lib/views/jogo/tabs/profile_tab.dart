@@ -222,7 +222,13 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                   child: isConnected
                       ? Column(
                           children: [
-                            _CaregiversList(caregivers: caregivers),
+                            _CaregiversList(
+                              caregivers: caregivers.where((cg) {
+                                final isProf = repo.currentRole == 'professional';
+                                if (!isProf) return true;
+                                return cg['id'] == repo.currentUser?.id;
+                              }).toList(),
+                            ),
                             const SizedBox(height: 24),
                             // REMOVED: Conectar novo cuidador button as patients only share their code now
                           ],
@@ -693,8 +699,9 @@ class _CaregiverTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name = caregiver['name'] ?? 'Cuidador';
-    final relation = caregiver['relationship'] ?? 'Cuidador';
+    final name = caregiver['name'] ?? 'Membro';
+    final role = caregiver['role'] as String?;
+    final relation = role == 'professional' ? 'Profissional' : 'Familiar';
     final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
     return Padding(

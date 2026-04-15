@@ -420,8 +420,12 @@ class DashboardTab extends StatelessWidget {
                   const SizedBox(width: 12),
                   if (isInactive)
                     TextButton.icon(
-                      onPressed: () =>
-                          vm.reactivatePatient(patient['id'].toString()),
+                      onPressed: () => _showReactivationDialog(
+                        context,
+                        vm,
+                        patient,
+                        primaryColor,
+                      ),
                       icon: const Icon(Icons.restore_rounded, size: 20),
                       label: const Text('REATIVAR',
                           style: TextStyle(
@@ -1124,6 +1128,104 @@ class DashboardTab extends StatelessWidget {
     if (result != null && vm.errorMessage == null && context.mounted) {
       Navigator.pop(context);
     }
+  }
+
+  void _showReactivationDialog(
+    BuildContext context,
+    CaregiverViewModel vm,
+    Map<String, dynamic> patient,
+    Color primaryColor,
+  ) {
+    final codeController = TextEditingController();
+    vm.clearError();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return ChangeNotifierProvider.value(
+          value: vm,
+          child: Consumer<CaregiverViewModel>(
+            builder: (context, vm, child) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                title: Text('Reativar ${patient['name']}'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (vm.errorMessage != null)
+                      _buildErrorBox(vm),
+                    const Text(
+                      'Insira o código de vínculo do paciente para reativar o monitoramento.',
+                      style: TextStyle(color: Colors.blueGrey, fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    TextField(
+                      controller: codeController,
+                      maxLength: 6,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: primaryColor,
+                        letterSpacing: 8,
+                      ),
+                      decoration: _dialogInputDecoration(primaryColor, 'ABCDEF').copyWith(
+                        counterText: "",
+                        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      textCapitalization: TextCapitalization.characters,
+                      onChanged: (val) {
+                        if (vm.errorMessage != null) vm.clearError();
+                      },
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: vm.isLoading ? null : () => Navigator.pop(context),
+                    child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                  ),
+                  ElevatedButton(
+                    onPressed: vm.isLoading
+                        ? null
+                        : () async {
+                            final code = codeController.text.trim().toUpperCase();
+                            if (code.length < 6) {
+                              vm.setErrorMessage('O código deve ter 6 caracteres.');
+                              return;
+                            }
+                            await vm.reactivatePatient(
+                              patientId: patient['id'].toString(),
+                              code: code,
+                            );
+                            if (vm.errorMessage == null && context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Vínculo reativado com sucesso!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: vm.isLoading
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('CONECTAR', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
   }
 }
 

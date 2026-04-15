@@ -363,17 +363,7 @@ class LoginViewModel extends ChangeNotifier {
         } catch (e) {
           final errorStr = e.toString().toLowerCase();
           if (errorStr.contains('already registered') || errorStr.contains('user_already_exists')) {
-            // Account exists, try to login and then complete profile if it was partial
-            try {
-              await _authRepository.signInWithEmailPassword(
-                email: _email.trim(),
-                password: _password,
-              );
-              await _authRepository.ensureProfileAndPatientRecord(metadata);
-            } catch (signInErr) {
-              // If sign in fails during rescue, it's likely a password mismatch for the existing account
-              throw Exception('Este e-mail já está em uso. Se ele for seu, tente fazer login ou use outro e-mail no início do cadastro.');
-            }
+            throw Exception('Este e-mail já está cadastrado. Faça login ou use outro e-mail.');
           } else {
             rethrow;
           }

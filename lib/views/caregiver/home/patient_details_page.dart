@@ -38,6 +38,14 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
     Map<String, dynamic> patient,
     CaregiverViewModel vm,
   ) {
+    // Check if this is the last active caregiver
+    final activeCount = vm.patientCaregivers.where((c) => (c['status'] ?? 'active') == 'active').length;
+    
+    if (activeCount <= 1) {
+      _showCannotDisconnectDialog(context, patient['name']);
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => ChangeNotifierProvider.value(
@@ -53,26 +61,41 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
               child: const Text('Cancelar'),
             ),
             Consumer<CaregiverViewModel>(
-              builder: (context, vm, child) => TextButton(
-                onPressed: vm.isLoading
-                    ? null
-                    : () async {
-                        await vm.disconnectFromPatient(patient['id'].toString());
-                        if (context.mounted) {
-                          Navigator.pop(context); // Close dialog
-                          Navigator.pop(context); // Go back to dashboard
-                        }
-                      },
-                child: vm.isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.orange))
-                    : const Text(
-                        'Desconectar',
-                        style: TextStyle(color: Colors.red),
+              builder: (context, vm, child) => Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (vm.errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Text(
+                        vm.errorMessage!,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                        textAlign: TextAlign.right,
                       ),
+                    ),
+                  TextButton(
+                    onPressed: vm.isLoading
+                        ? null
+                        : () async {
+                            await vm.disconnectFromPatient(patient['id'].toString());
+                            if (vm.errorMessage == null && context.mounted) {
+                              Navigator.pop(context); // Close dialog
+                              Navigator.pop(context); // Go back to dashboard
+                            }
+                          },
+                    child: vm.isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.orange))
+                        : const Text(
+                            'Desconectar',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -466,21 +489,19 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                   if (vm.patientCaregivers.isEmpty)
                     const Text('Carregando cuidadores...')
                   else
-                    ...vm.patientCaregivers.map((cg) => _buildCaregiverTile(cg)),
+                    ...vm.patientCaregivers.where((cg) {
+                      final isProf = vm.authRepository.currentRole == 'professional';
+                      if (!isProf) return true;
+                      // If professional, only see self
+                      return cg['id'] == vm.authRepository.currentUser?.id;
+                    }).map((cg) => _buildCaregiverTile(cg)),
 
                   const SizedBox(height: 48),
                   SizedBox(
                     width: double.infinity,
                     child: patient['status'] == 'inactive'
                       ? ElevatedButton.icon(
-                          onPressed: () async {
-                            await vm.reactivatePatient(patient['id'].toString());
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Paciente reativado!'), backgroundColor: Colors.green),
-                              );
-                            }
-                          },
+                          onPressed: () => _showReactivationDialog(context, vm, patient),
                           icon: const Icon(Icons.restore_rounded),
                           label: const Text('Reativar Paciente'),
                           style: ElevatedButton.styleFrom(
@@ -517,7 +538,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
   Widget _buildCaregiverTile(Map<String, dynamic> cg) {
     final vm = context.read<CaregiverViewModel>();
     final isMe = cg['id'] == vm.authRepository.currentUser?.id;
-    final name = cg['full_name'] ?? 'Cuidador';
+    final name = cg['full_name'] ?? 'Membro';
     final roleText = cg['role'] == 'professional' ? 'Profissional' : 'Familiar';
     final initials = name.isNotEmpty ? name[0].toUpperCase() : 'C';
 
@@ -551,13 +572,131 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
               ],
             ),
           ),
-          if (cg['added_at'] != null)
-            Text(
-              'Desde ${vm.authRepository.formatDateBR(cg['added_at'])}',
-              style: TextStyle(fontSize: 10, color: Colors.grey.shade400),
-            ),
+          _buildCaregiverStatusBadge(cg['status'] ?? 'active'),
         ],
       ),
+    );
+  }
+
+
+  Widget _buildCaregiverStatusBadge(String status) {
+    final isActive = status == 'active';
+    final greenColor = const Color(0xFF2E7D32);
+    final greenBg = const Color(0xFFE8F5E9);
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: isActive ? greenBg : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(100),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isActive ? Icons.check_circle_rounded : Icons.pause_circle_filled_rounded,
+            size: 14,
+            color: isActive ? greenColor : Colors.grey.shade600,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            isActive ? 'Ativo' : 'Pausado',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: isActive ? greenColor : Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCannotDisconnectDialog(BuildContext context, String patientName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Não é possível sair'),
+        content: Text(
+          'Você é o único cuidador ativo para $patientName. Para se desconectar, você deve primeiro vincular outro cuidador.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReactivationDialog(
+    BuildContext context,
+    CaregiverViewModel vm,
+    Map<String, dynamic> patient,
+  ) {
+    final codeController = TextEditingController();
+    vm.clearError();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return ChangeNotifierProvider.value(
+          value: vm,
+          child: Consumer<CaregiverViewModel>(
+            builder: (context, vm, child) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                title: Text('Reativar ${patient['name']}'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (vm.errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)),
+                          child: Text(vm.errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                        ),
+                      ),
+                    const Text('Insira o código de vínculo para reativar o monitoramento.'),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: codeController,
+                      maxLength: 6,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 4),
+                      decoration: const InputDecoration(border: OutlineInputBorder(), counterText: ""),
+                      textCapitalization: TextCapitalization.characters,
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+                  ElevatedButton(
+                    onPressed: vm.isLoading
+                        ? null
+                        : () async {
+                            await vm.reactivatePatient(
+                              patientId: patient['id'].toString(),
+                              code: codeController.text.trim().toUpperCase(),
+                            );
+                            if (vm.errorMessage == null && context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Reativado com sucesso!'), backgroundColor: Colors.green),
+                              );
+                            }
+                          },
+                    child: vm.isLoading ? const CircularProgressIndicator() : const Text('REATIVAR'),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }

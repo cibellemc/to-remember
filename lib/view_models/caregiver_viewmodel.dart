@@ -51,7 +51,7 @@ class CaregiverViewModel extends ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>?> connectToPatient(String code, String suffix, {String? targetPatientId}) async {
+  Future<Map<String, dynamic>?> connectToPatient(String code, String? suffix, {String? targetPatientId}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -109,14 +109,22 @@ class CaregiverViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> reactivatePatient(String patientId) async {
+  Future<void> reactivatePatient({
+    required String patientId,
+    required String code,
+    String? suffix,
+  }) async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
     try {
-      await _authRepository.activatePatient(patientId);
+      await _authRepository.connectWithCode(
+        code,
+        patientSuffix: suffix,
+      );
       await fetchConnectedPatients();
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
     } finally {
       _isLoading = false;
       notifyListeners();

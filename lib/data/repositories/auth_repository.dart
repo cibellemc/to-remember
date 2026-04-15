@@ -6,9 +6,19 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AuthRepository extends ChangeNotifier {
   final SupabaseClient _supabase;
 
-  AuthRepository(this._supabase);
+  AuthRepository(this._supabase) {
+    // Se já existe usuário na inicialização (sessão persistida), marca como visto.
+    if (_supabase.auth.currentUser != null) {
+      _hasHadSession = true;
+    }
+  }
 
   User? get currentUser => _supabase.auth.currentUser;
+
+  // Flag que indica se já houve uma sessão autenticada nesta execução do app.
+  // Isso diferencia "nunca entrou" (mostrar onboarding) de "fez logout" (mostrar login).
+  bool _hasHadSession = false;
+  bool get hasHadSession => _hasHadSession;
 
   // State properties for reactivity
   Map<String, dynamic>? _patientProfile;
@@ -82,6 +92,7 @@ class AuthRepository extends ChangeNotifier {
         debugPrint('Error ensuring patient/profile record: $e');
       }
     }
+    _hasHadSession = true;
     notifyListeners();
   }
 
@@ -97,6 +108,7 @@ class AuthRepository extends ChangeNotifier {
     );
 
     if (response.user != null) {
+      _hasHadSession = true;
       await ensureProfileAndPatientRecord(metadata);
     }
     notifyListeners();
@@ -166,6 +178,7 @@ class AuthRepository extends ChangeNotifier {
     required String password,
   }) async {
     await _supabase.auth.signInWithPassword(email: email, password: password);
+    _hasHadSession = true;
     notifyListeners();
   }
 
@@ -206,6 +219,10 @@ class AuthRepository extends ChangeNotifier {
     final user = currentUser;
     if (user == null) return null;
 
+    if (_emulatedPatientId != null) {
+      return getActiveCodeForPatient(_emulatedPatientId!);
+    }
+
     final patient = await _supabase
         .from('patients')
         .select('id')
@@ -236,7 +253,7 @@ class AuthRepository extends ChangeNotifier {
     final user = currentUser;
     if (user == null) return null;
 
-    String? targetPatientId = patientId;
+    String? targetPatientId = patientId ?? _emulatedPatientId;
     if (targetPatientId == null) {
       final patient = await _supabase
           .from('patients')
@@ -349,7 +366,7 @@ class AuthRepository extends ChangeNotifier {
 
   Future<Map<String, dynamic>?> connectWithCode(
     String code, {
-    required String patientSuffix,
+    String? patientSuffix,
     String? targetPatientId,
   }) async {
     final user = currentUser;
@@ -359,7 +376,7 @@ class AuthRepository extends ChangeNotifier {
       final sanitizedCode = code.trim().toUpperCase().replaceAll(' ', '');
       final params = {
         'p_code': sanitizedCode,
-        'p_patient_suffix': patientSuffix.trim(),
+        'p_patient_suffix': patientSuffix?.trim(),
         'p_target_patient_id': targetPatientId,
       };
 
@@ -421,6 +438,19 @@ class AuthRepository extends ChangeNotifier {
   Future<void> disconnectPatient(String patientId) async {
     final user = currentUser;
     if (user == null) return;
+
+    // Check if this is the last active caregiver for this patient
+    final response = await _supabase
+        .from('patient_caregivers')
+        .select('caregiver_id')
+        .eq('patient_id', patientId)
+        .eq('status', 'active');
+    
+    final count = (response as List).length;
+    
+    if (count <= 1) {
+      throw Exception('Não é possível sair. Este paciente precisa de pelo menos um cuidador ativo. Conecte outro cuidador primeiro.');
+    }
 
     await _supabase
         .from('patient_caregivers')

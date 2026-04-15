@@ -9,6 +9,7 @@ import 'view_models/login_viewmodel.dart';
 import 'views/jogo/jogo_page.dart';
 import 'views/caregiver/home/caregiver_home_page.dart';
 import 'views/onboarding/onboarding_page.dart';
+import 'views/login/login_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,7 +55,11 @@ class MyApp extends StatelessWidget {
 
   Widget _resolveHome(AuthRepository repo) {
     final user = repo.currentUser;
-    if (user == null) return const OnboardingPage();
+    if (user == null) {
+      // Se já houve uma sessão ativa antes (ex: fez logout), vai para login.
+      // Se é a primeira vez no app, vai para o onboarding.
+      return repo.hasHadSession ? const LoginPage() : const OnboardingPage();
+    }
 
     final role = repo.currentRole;
     if (role == 'caregiver') return const CaregiverHomePage();
