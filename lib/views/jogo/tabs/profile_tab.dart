@@ -183,7 +183,7 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
               SliverToBoxAdapter(
                 child: _SectionPadding(
                   top: 16,
-                  child: Column(
+                  child: repo.realRole != 'professional' ? Column(
                     children: [
                       _ProfileHeaderCard(
                         name: profile?['name'] ?? 'Usuário',
@@ -192,6 +192,7 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                       if (profile != null) ...[
                         const SizedBox(height: 16),
                         _CompactCodeCard(
+                          key: const Key('card_codigo_vinculo'),
                           code: repo.connectionCode ?? '------',
                           suffix: profile?['linking_suffix'] ?? '----',
                           onCopy: () {
@@ -202,38 +203,53 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                         ),
                       ],
                     ],
+                  ) : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Acesso Restrito',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: _T.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Como profissional, você não tem acesso aos detalhes de perfil e equipe deste paciente.',
+                        style: TextStyle(fontSize: 15, color: _T.textSecondary, height: 1.4),
+                      ),
+                    ],
                   ),
                 ),
               ),
 
-              const SliverToBoxAdapter(
-                child: _SectionPadding(
-                  top: 24,
-                  child: _SectionHeader(
-                    icon: Icons.people_alt_rounded,
-                    label: 'Minha Equipe de Cuidado',
+              if (repo.realRole != 'professional')
+                const SliverToBoxAdapter(
+                  child: _SectionPadding(
+                    top: 24,
+                    child: _SectionHeader(
+                      icon: Icons.people_alt_rounded,
+                      label: 'Minha Equipe de Cuidado',
+                    ),
                   ),
                 ),
-              ),
 
               SliverToBoxAdapter(
                 child: _SectionPadding(
                   top: 12,
-                  child: isConnected
-                      ? Column(
-                          children: [
-                            _CaregiversList(
-                              caregivers: caregivers.where((cg) {
-                                final isProf = repo.currentRole == 'professional';
-                                if (!isProf) return true;
-                                return cg['id'] == repo.currentUser?.id;
-                              }).toList(),
-                            ),
-                            const SizedBox(height: 24),
-                            // REMOVED: Conectar novo cuidador button as patients only share their code now
-                          ],
-                        )
-                      : const _EmptyConnectionsBanner(),
+                  child: repo.realRole != 'professional'
+                      ? (isConnected
+                          ? Column(
+                              children: [
+                                _CaregiversList(
+                                  caregivers: caregivers,
+                                ),
+                                const SizedBox(height: 24),
+                              ],
+                            )
+                          : const _EmptyConnectionsBanner())
+                      : const SizedBox.shrink(),
                 ),
               ),
 
@@ -251,6 +267,7 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                         const SizedBox(height: 12),
                         _buildSettingsAction(
                           context,
+                          key: const Key('btn_sair_visao_paciente'),
                           icon: Icons.settings_backup_restore_rounded,
                           label: 'Voltar para Visão de Gestor',
                           color: _T.primaryDark,
@@ -292,6 +309,7 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                 ),
                 const SizedBox(height: 24),
                 TextField(
+                  key: const Key('input_pin'),
                   controller: controller,
                   keyboardType: TextInputType.number,
                   obscureText: true,
@@ -377,12 +395,14 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
 
   Widget _buildSettingsAction(
     BuildContext context, {
+    Key? key,
     required IconData icon,
     required String label,
     required Color color,
     required VoidCallback onTap,
   }) {
     return InkWell(
+      key: key,
       onTap: onTap,
       borderRadius: BorderRadius.circular(_T.radiusCard),
       child: Container(
@@ -600,6 +620,7 @@ class _EmptyConnectionsBanner extends StatelessWidget {
   final VoidCallback onCopy;
 
   const _CompactCodeCard({
+    super.key,
     required this.code,
     required this.suffix,
     required this.onCopy,

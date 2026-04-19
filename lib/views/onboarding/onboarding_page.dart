@@ -214,6 +214,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
+                      key: const Key('btn_comecar'),
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const RegistrationPage()),

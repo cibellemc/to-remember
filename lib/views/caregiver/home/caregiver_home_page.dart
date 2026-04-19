@@ -19,6 +19,15 @@ class _CaregiverHomePageState extends State<CaregiverHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final authRepo = context.watch<AuthRepository>();
+    
+    // Check for missing PIN and show mandatory dialog
+    if (!authRepo.isPinSet && authRepo.currentUser != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showMandatoryPinDialog(context, authRepo);
+      });
+    }
+
     return ChangeNotifierProvider(
       create: (context) => CaregiverViewModel(context.read<AuthRepository>()),
       child: Scaffold(
@@ -42,6 +51,71 @@ class _CaregiverHomePageState extends State<CaregiverHomePage> {
             BottomNavigationBarItem(
               icon: Icon(Icons.settings),
               label: 'Config',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showMandatoryPinDialog(BuildContext context, AuthRepository repo) {
+    final pinController = TextEditingController();
+    String? error;
+    bool loading = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Force user to set PIN
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Configurar PIN de Segurança'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Identificamos que sua conta ainda não possui um PIN de segurança. '
+                'Ele é obrigatório para garantir a proteção dos dados ao alternar entre visões.',
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: pinController,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 4,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 8),
+                decoration: InputDecoration(
+                  counterText: '',
+                  hintText: '••••',
+                  errorText: error,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: loading
+                  ? null
+                  : () async {
+                      if (pinController.text.length != 4) {
+                        setDialogState(() => error = 'O PIN deve ter 4 dígitos');
+                        return;
+                      }
+
+                      setDialogState(() => loading = true);
+                      try {
+                        await repo.updateSecurityPin(pinController.text);
+                        await repo.checkSecurityPinSet();
+                        if (context.mounted) Navigator.pop(context);
+                      } catch (e) {
+                        setDialogState(() {
+                          error = 'Erro ao salvar PIN';
+                          loading = false;
+                        });
+                      }
+                    },
+              child: loading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Salvar PIN'),
             ),
           ],
         ),

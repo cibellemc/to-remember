@@ -418,6 +418,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                   const SizedBox(height: 16),
                   // New View Switcher Card
                   InkWell(
+                    key: const Key('card_patient_view'),
                     onTap: () {
                       vm.authRepository.setRoleOverride('patient', patientId: patient['id'].toString());
                     },
@@ -477,7 +478,8 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
 
                   const SizedBox(height: 32),
 
-                  const Text(
+                  if (vm.authRepository.currentRole != 'professional') ...[
+                    const Text(
                     'Equipe de Cuidado',
                     style: TextStyle(
                       fontSize: 20,
@@ -489,12 +491,9 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                   if (vm.patientCaregivers.isEmpty)
                     const Text('Carregando cuidadores...')
                   else
-                    ...vm.patientCaregivers.where((cg) {
-                      final isProf = vm.authRepository.currentRole == 'professional';
-                      if (!isProf) return true;
-                      // If professional, only see self
-                      return cg['id'] == vm.authRepository.currentUser?.id;
-                    }).map((cg) => _buildCaregiverTile(cg)),
+                    ...vm.patientCaregivers.map((cg) => _buildCaregiverTile(cg)),
+                    const SizedBox(height: 32),
+                  ],
 
                   const SizedBox(height: 48),
                   SizedBox(

@@ -10,6 +10,7 @@ class AuthRepository extends ChangeNotifier {
     // Se já existe usuário na inicialização (sessão persistida), marca como visto.
     if (_supabase.auth.currentUser != null) {
       _hasHadSession = true;
+      checkSecurityPinSet();
     }
   }
 
@@ -19,6 +20,9 @@ class AuthRepository extends ChangeNotifier {
   // Isso diferencia "nunca entrou" (mostrar onboarding) de "fez logout" (mostrar login).
   bool _hasHadSession = false;
   bool get hasHadSession => _hasHadSession;
+
+  bool _isPinSet = true; 
+  bool get isPinSet => _isPinSet;
 
   // State properties for reactivity
   Map<String, dynamic>? _patientProfile;
@@ -40,8 +44,20 @@ class AuthRepository extends ChangeNotifier {
   String? get roleOverride => _roleOverride;
   String? get emulatedPatientId => _emulatedPatientId;
 
-  String? get currentRole => _roleOverride ?? currentUser?.userMetadata?['role'] as String?;
+  String? get currentRole =>
+      _roleOverride ?? currentUser?.userMetadata?['role'] as String?;
 
+  /// Returns the actual role of the user (professional/family/patient) 
+  /// ignoring any role override (like "Patient View").
+  String? get realRole {
+    final meta = currentUser?.userMetadata;
+    if (meta == null) return null;
+    final role = meta['role'] as String?;
+    if (role == 'caregiver') {
+      return meta['caregiver_type'] as String?; // 'professional' or 'relative'
+    }
+    return role;
+  }
 
   Future<void> signInAnonymously({
     required String role,
@@ -110,6 +126,7 @@ class AuthRepository extends ChangeNotifier {
     if (response.user != null) {
       _hasHadSession = true;
       await ensureProfileAndPatientRecord(metadata);
+      await checkSecurityPinSet();
     }
     notifyListeners();
   }
@@ -131,6 +148,7 @@ class AuthRepository extends ChangeNotifier {
             : 'family',
         'crm': metadata['professional_registry'],
         'specialty': metadata['specialty'],
+        'security_pin': metadata['security_pin'],
       });
 
       // 2. Ensure Patient (only if not linking)
@@ -179,6 +197,7 @@ class AuthRepository extends ChangeNotifier {
   }) async {
     await _supabase.auth.signInWithPassword(email: email, password: password);
     _hasHadSession = true;
+    await checkSecurityPinSet();
     notifyListeners();
   }
 
@@ -345,16 +364,21 @@ class AuthRepository extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>?> getPatientFromCode(String code, String suffix) async {
+  Future<Map<String, dynamic>?> getPatientFromCode(
+    String code,
+    String suffix,
+  ) async {
     final sanitizedCode = code.trim().toUpperCase().replaceAll(' ', '');
     try {
-      final response = await _supabase.rpc(
-        'get_patient_by_code',
-        params: {
-          'p_code': sanitizedCode,
-          'p_patient_suffix': suffix.trim(),
-        },
-      ).maybeSingle();
+      final response = await _supabase
+          .rpc(
+            'get_patient_by_code',
+            params: {
+              'p_code': sanitizedCode,
+              'p_patient_suffix': suffix.trim(),
+            },
+          )
+          .maybeSingle();
 
       if (response == null) return null;
       return Map<String, dynamic>.from(response);
@@ -392,7 +416,8 @@ class AuthRepository extends ChangeNotifier {
       }
 
       // Return patient record for both link types (as long as we have a patientId)
-      if ((result['type'] == 'patient_linked' || result['type'] == 'caregiver_linked') && 
+      if ((result['type'] == 'patient_linked' ||
+              result['type'] == 'caregiver_linked') &&
           result['patient_id'] != null) {
         final patientId = result['patient_id'].toString();
         final patientResponse = await _supabase
@@ -445,11 +470,13 @@ class AuthRepository extends ChangeNotifier {
         .select('caregiver_id')
         .eq('patient_id', patientId)
         .eq('status', 'active');
-    
+
     final count = (response as List).length;
-    
+
     if (count <= 1) {
-      throw Exception('Não é possível sair. Este paciente precisa de pelo menos um cuidador ativo. Conecte outro cuidador primeiro.');
+      throw Exception(
+        'Não é possível sair. Este paciente precisa de pelo menos um cuidador ativo. Conecte outro cuidador primeiro.',
+      );
     }
 
     await _supabase
@@ -587,7 +614,8 @@ class AuthRepository extends ChangeNotifier {
               if (c['used_at'] != null) return false;
               final expiresAt = c['expires_at'];
               if (expiresAt == null) return true;
-              return DateTime.tryParse(expiresAt.toString())?.isAfter(now) ?? false;
+              return DateTime.tryParse(expiresAt.toString())?.isAfter(now) ??
+                  false;
             }).toList();
 
             if (activeCodes.isNotEmpty) {
@@ -679,11 +707,11 @@ class AuthRepository extends ChangeNotifier {
   void setRoleOverride(String? role, {String? patientId}) {
     _roleOverride = role;
     _emulatedPatientId = patientId;
-    
+
     // Clear profile so it can be reloaded for the right context
     _patientProfile = null;
     _cancelRealtimeListeners();
-    
+
     notifyListeners();
   }
 
@@ -691,7 +719,10 @@ class AuthRepository extends ChangeNotifier {
     final user = currentUser;
     if (user == null) throw Exception('Não autenticado');
 
-    await _supabase.from('profiles').update({'security_pin': pin}).eq('id', user.id);
+    await _supabase
+        .from('profiles')
+        .update({'security_pin': pin})
+        .eq('id', user.id);
   }
 
   Future<bool> verifySecurityPin(String pin) async {
@@ -699,11 +730,32 @@ class AuthRepository extends ChangeNotifier {
     if (user == null) return false;
 
     try {
-      final response = await _supabase.rpc('verify_security_pin', params: {'p_pin': pin});
+      final response = await _supabase.rpc(
+        'verify_security_pin',
+        params: {'p_pin': pin},
+      );
       return response as bool;
     } catch (e) {
       debugPrint('Error verifying PIN: $e');
       return false;
     }
+  }
+
+  Future<void> checkSecurityPinSet() async {
+    final user = currentUser;
+    if (user == null) return;
+
+    try {
+      final response = await _supabase
+          .from('profiles')
+          .select('security_pin')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      _isPinSet = response != null && response['security_pin'] != null;
+    } catch (e) {
+      debugPrint('Error checking PIN set: $e');
+    }
+    notifyListeners();
   }
 }

@@ -62,7 +62,9 @@ class MyApp extends StatelessWidget {
     }
 
     final role = repo.currentRole;
-    if (role == 'caregiver') return const CaregiverHomePage();
+    if (role == 'caregiver' || role == 'professional' || role == 'family') {
+      return const CaregiverHomePage();
+    }
     return const PatientHomePage();
   }
 }

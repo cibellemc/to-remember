@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../view_models/login_viewmodel.dart';
 import '../../jogo/jogo_page.dart';
@@ -22,6 +23,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   final _patientNameController = TextEditingController();
   final _patientBirthdateController = TextEditingController();
   final _connectionCodeController = TextEditingController();
+  final _pinController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -51,6 +53,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
     _patientNameController.dispose();
     _patientBirthdateController.dispose();
     _connectionCodeController.dispose();
+    _pinController.dispose();
     super.dispose();
   }
 
@@ -196,10 +199,69 @@ class _RegistrationPageState extends State<RegistrationPage> {
         if (vm.caregiverType == 'professional') {
           return _buildProfessionalInfo(vm, primaryColor);
         }
-        return const SizedBox();
+        return _buildPinStep(vm, primaryColor);
+      case 5:
+        return _buildPinStep(vm, primaryColor);
       default:
         return const SizedBox();
     }
+  }
+
+  Widget _buildPinStep(LoginViewModel vm, Color primaryColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'PIN de Segurança',
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Crie um PIN de 4 dígitos. Ele será necessário para sair da visão do paciente e acessar seu painel.',
+          style: TextStyle(fontSize: 16, color: Colors.black54),
+        ),
+        const SizedBox(height: 24),
+        _SegmentedProgress(
+          stepNames: _getStepNames(vm),
+          currentStepIndex: vm.caregiverType == 'professional' ? 5 : 4,
+          primaryColor: primaryColor,
+        ),
+        const SizedBox(height: 32),
+        Center(
+          child: SizedBox(
+            width: 200,
+            child: TextField(
+              key: const Key('input_pin_registration'),
+              controller: _pinController,
+              onChanged: vm.setSecurityPin,
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              maxLength: 4,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 16),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                counterText: '',
+                hintText: '••••',
+                hintStyle: TextStyle(color: Colors.grey.shade300, letterSpacing: 16),
+                errorText: vm.pinError,
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                contentPadding: const EdgeInsets.symmetric(vertical: 20),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: primaryColor, width: 2),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildAuthModeSelection(LoginViewModel vm, Color primaryColor) {
@@ -257,6 +319,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
         ),
         const SizedBox(height: 32),
         _OptionCard(
+          key: const Key('choice_patient'),
           title: 'Quero jogar',
           subtitle: 'Sou paciente ou quero usar os jogos e atividades do app.',
           icon: Icons.videogame_asset_outlined,
@@ -281,6 +344,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
         ),
         const SizedBox(height: 16),
         _OptionCard(
+          key: const Key('choice_caregiver'),
           title: 'Sou cuidador',
           subtitle: 'Cuido de alguém e quero acompanhar o progresso.',
           icon: Icons.person_search_outlined,
@@ -469,6 +533,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
     final names = <String>['Papel', 'Acesso', 'Tipo'];
     names.add('Dados');
     if (vm.caregiverType == 'professional') names.add('Profis.');
+    names.add('PIN');
     return names;
   }
 
@@ -527,8 +592,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
     if (vm.isLoginMode) {
       isLast = vm.currentStep == 2;
     } else {
-      isLast = (vm.caregiverType == 'relative' && vm.currentStep == 3) ||
-               (vm.caregiverType == 'professional' && vm.currentStep == 4);
+      isLast = (vm.caregiverType == 'relative' && vm.currentStep == 4) ||
+               (vm.caregiverType == 'professional' && vm.currentStep == 5);
     }
 
     // Role selection step (0) has its own navigation via cards
@@ -639,6 +704,7 @@ class _OptionCard extends StatelessWidget {
   final Color primaryColor;
 
   const _OptionCard({
+    super.key,
     required this.title,
     required this.subtitle,
     required this.icon,

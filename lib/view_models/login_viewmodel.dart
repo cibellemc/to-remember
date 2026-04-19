@@ -21,8 +21,8 @@ class LoginViewModel extends ChangeNotifier {
     if (_selectedRole == 'patient') return 1;
     if (isLoginMode) return 3; // Role (0), Mode (1), LoginInfo (2)
     if (_selectedRole == 'caregiver') {
-      if (_caregiverType == 'professional') return 5; // Role (0), Mode (1), ProfileType (2), BasicInfo (3), ProfessionalInfo (4)
-      return 4; // Familiar: Role (0), Mode (1), ProfileType (2), BasicInfo (3)
+      if (_caregiverType == 'professional') return 6; // Role(0), Mode(1), Type(2), Basic(3), Prof(4), PIN(5)
+      return 5; // Role(0), Mode(1), Type(2), Basic(3), PIN(4)
     }
     return 5; // Default safety
   }
@@ -48,6 +48,8 @@ class LoginViewModel extends ChangeNotifier {
   String get professionalRegistry => _professionalRegistry;
   String _specialty = '';
   String get specialty => _specialty;
+  String _securityPin = '';
+  String get securityPin => _securityPin;
 
   String _patientBirthdate = '';
   String get patientBirthdate => _patientBirthdate;
@@ -121,6 +123,11 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setSecurityPin(String value) {
+    _securityPin = value;
+    notifyListeners();
+  }
+
 
   void setConnectionCode(String value) {
     _connectionCode = value;
@@ -191,6 +198,9 @@ class LoginViewModel extends ChangeNotifier {
   String? _registryError;
   String? get registryError => _registryError;
 
+  String? _pinError;
+  String? get pinError => _pinError;
+
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
@@ -201,6 +211,7 @@ class LoginViewModel extends ChangeNotifier {
     _confirmPasswordError = null;
     _patientNameError = null;
     _registryError = null;
+    _pinError = null;
     _errorMessage = null;
   }
 
@@ -282,6 +293,23 @@ class LoginViewModel extends ChangeNotifier {
       return isValid;
     }
 
+    // Step 3 (Register) or 4 (Professional): Security PIN validation
+    // Let's decide if PIN is always on Step 3 for everyone or separate.
+    // Based on RegistrationPage, Step 3 is BasicInfo. I'll add PIN there or in a new step.
+    // If I add a new step, I need to update totalSteps.
+    if (_selectedRole == 'caregiver' && !isLoginMode) {
+      bool isPinStep = (_caregiverType == 'professional' && _currentStep == 5) || 
+                       (_caregiverType == 'relative' && _currentStep == 4);
+      
+      if (isPinStep) {
+        if (_securityPin.length != 4) {
+          _pinError = 'O PIN deve ter 4 dígitos.';
+          return false;
+        }
+        return true;
+      }
+    }
+
     return true;
   }
 
@@ -298,6 +326,7 @@ class LoginViewModel extends ChangeNotifier {
       if (_caregiverType == 'professional') {
         filled = filled && _professionalRegistry.trim().isNotEmpty;
       }
+      filled = filled && _securityPin.length == 4;
       return filled;
     }
   }
@@ -352,6 +381,7 @@ class LoginViewModel extends ChangeNotifier {
           'patient_stage': _patientStage,
           'patient_birthdate': _formatDateForSupabase(_patientBirthdate.trim()),
           'relationship': null,
+          'security_pin': _securityPin,
         };
 
         try {
