@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'tabs/games_tab.dart';
-import 'tabs/achievements_tab.dart';
 import 'tabs/profile_tab.dart';
 
 class PatientHomePage extends StatefulWidget {
@@ -17,7 +16,6 @@ class _PatientHomePageState extends State<PatientHomePage> {
 
   final List<Widget> _tabs = const [
     GamesTab(),
-    AchievementsTab(),
     ProfileTab(),
   ];
 
@@ -90,17 +88,6 @@ class _PatientHomePageState extends State<PatientHomePage> {
                 child: Icon(Icons.videogame_asset),
               ),
               label: 'Jogos',
-            ),
-            BottomNavigationBarItem(
-              icon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.emoji_events_outlined),
-              ),
-              activeIcon: Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Icon(Icons.emoji_events),
-              ),
-              label: 'Conquistas',
             ),
             BottomNavigationBarItem(
               icon: Padding(
