@@ -41,6 +41,8 @@ class AuthRepository extends ChangeNotifier {
   String? _lastSubscribedPatientId;
   String? _roleOverride;
   String? _emulatedPatientId;
+  bool _isGeneratingCode = false; 
+
   String? get roleOverride => _roleOverride;
   String? get emulatedPatientId => _emulatedPatientId;
 
@@ -284,8 +286,12 @@ class AuthRepository extends ChangeNotifier {
 
     if (targetPatientId == null) return null;
 
+    if (_isGeneratingCode) return null;
+    _isGeneratingCode = true;
+
     final code = _generateRandomCode(6);
     try {
+      debugPrint('Generating new connection code for patient: $targetPatientId');
       await _supabase.from('connection_codes').insert({
         'code': code.toUpperCase(),
         'patient_id': targetPatientId,
@@ -301,6 +307,8 @@ class AuthRepository extends ChangeNotifier {
     } catch (e) {
       debugPrint('Error generating code: $e');
       return null;
+    } finally {
+      _isGeneratingCode = false;
     }
   }
 
@@ -566,6 +574,7 @@ class AuthRepository extends ChangeNotifier {
         .stream(primaryKey: ['id'])
         .eq(queryColumn, queryId)
         .listen((data) {
+          debugPrint('Patient stream update: ${data.length} records');
           if (data.isNotEmpty) {
             _patientProfile = data.first;
             notifyListeners();
@@ -601,14 +610,15 @@ class AuthRepository extends ChangeNotifier {
 
   void _setupCodeListener(String patientId) {
     _codeSub?.cancel();
-    // NOTE: connection_codes uses 'code' as primary key (not 'id')
+    debugPrint('Setting up connection code listener for patient: $patientId');
+
     _codeSub = _supabase
         .from('connection_codes')
         .stream(primaryKey: ['code'])
         .eq('patient_id', patientId)
         .listen((data) async {
+          debugPrint('Connection codes stream update: ${data.length} records');
           if (data.isNotEmpty) {
-            // Find the latest active (unused, non-expired) code
             final now = DateTime.now().toUtc();
             final activeCodes = data.where((c) {
               if (c['used_at'] != null) return false;
@@ -623,15 +633,29 @@ class AuthRepository extends ChangeNotifier {
                 (a, b) => b['created_at'].compareTo(a['created_at']),
               );
               _connectionCode = activeCodes.first['code'];
+              debugPrint('Found active code in stream: $_connectionCode');
               notifyListeners();
             } else {
-              // All visible codes are used — the new rotated code may not have
-              // arrived in the stream yet. Do a fresh DB fetch to pick it up.
-              await getActiveCodeForPatient(patientId);
+              debugPrint('No active codes in stream (all used or expired).');
+              _connectionCode = null;
+              notifyListeners();
+
+              // Auto-generate if we are the patient or emulating one
+              if (currentRole == 'patient' && !_isGeneratingCode) {
+                debugPrint('Auto-generating new code from stream listener...');
+                await generateConnectionCode(patientId: patientId);
+              }
             }
           } else {
-            // No codes in stream at all — fetch from DB
-            await getActiveCodeForPatient(patientId);
+            debugPrint('No codes found in stream for this patient.');
+            _connectionCode = null;
+            notifyListeners();
+
+            // Auto-generate if we are the patient
+            if (currentRole == 'patient' && !_isGeneratingCode) {
+              debugPrint('Auto-generating first code from stream listener...');
+              await generateConnectionCode(patientId: patientId);
+            }
           }
         });
   }
