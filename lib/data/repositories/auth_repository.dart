@@ -91,11 +91,13 @@ class AuthRepository extends ChangeNotifier {
             .maybeSingle();
 
         if (existing == null) {
-          // Extract suffix from name if it follows the pattern "#1234"
+          // Generate a random 4-digit suffix if not found in name
           String? suffix;
           final match = RegExp(r'#(\d{4})').firstMatch(fullName);
           if (match != null) {
             suffix = match.group(1);
+          } else {
+            suffix = Random().nextInt(10000).toString().padLeft(4, '0');
           }
 
           await _supabase.from('patients').insert({
@@ -172,6 +174,10 @@ class AuthRepository extends ChangeNotifier {
                 'name': patientName,
                 'stage': metadata['patient_stage'],
                 'birth_date': _tryFormatDate(metadata['patient_birthdate']),
+                'linking_suffix': RegExp(r'#(\d{4})')
+                        .firstMatch(patientName)
+                        ?.group(1) ??
+                    Random().nextInt(10000).toString().padLeft(4, '0'),
                 'auth_id':
                     null, // Explicitly null for caregiver-created patients
               })
@@ -242,6 +248,20 @@ class AuthRepository extends ChangeNotifier {
         .maybeSingle();
 
     if (_patientProfile != null) {
+      // Fix missing linking_suffix for existing accounts
+      if (_patientProfile!['linking_suffix'] == null ||
+          _patientProfile!['linking_suffix'].toString().isEmpty) {
+        final newSuffix = Random().nextInt(10000).toString().padLeft(4, '0');
+        try {
+          await _supabase
+              .from('patients')
+              .update({'linking_suffix': newSuffix}).eq(
+                  'id', _patientProfile!['id']);
+          _patientProfile!['linking_suffix'] = newSuffix;
+        } catch (e) {
+          debugPrint('Error repairing linking_suffix: $e');
+        }
+      }
       _setupRealtimeListeners();
     }
 
@@ -339,6 +359,8 @@ class AuthRepository extends ChangeNotifier {
           'name': name,
           'stage': stage,
           'birth_date': _tryFormatDate(birthdate),
+          'linking_suffix': RegExp(r'#(\d{4})').firstMatch(name)?.group(1) ??
+              Random().nextInt(10000).toString().padLeft(4, '0'),
           'auth_id': null, // Caregiver created patient
           'created_by': user.id,
           'is_profile_complete': (name.isNotEmpty && stage != null),
