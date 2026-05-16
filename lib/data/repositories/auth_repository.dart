@@ -322,8 +322,15 @@ class AuthRepository extends ChangeNotifier {
     if (_isGeneratingCode) return null;
     _isGeneratingCode = true;
 
-    final code = _generateRandomCode(6);
     try {
+      // Double check for an existing active code to prevent race conditions
+      final existingCode = await getActiveCodeForPatient(targetPatientId);
+      if (existingCode != null) {
+        debugPrint('Active code already exists ($existingCode), skipping generation.');
+        return existingCode;
+      }
+
+      final code = _generateRandomCode(6);
       debugPrint('Generating new connection code for patient: $targetPatientId');
       await _supabase.from('connection_codes').insert({
         'code': code.toUpperCase(),
@@ -675,8 +682,10 @@ class AuthRepository extends ChangeNotifier {
               _connectionCode = null;
               notifyListeners();
 
-              // Auto-generate if we are the patient or emulating one
-              if (currentRole == 'patient' && !_isGeneratingCode) {
+              // Auto-generate ONLY if we are the REAL patient (not emulating)
+              if (currentRole == 'patient' &&
+                  _emulatedPatientId == null &&
+                  !_isGeneratingCode) {
                 debugPrint('Auto-generating new code from stream listener...');
                 await generateConnectionCode(patientId: patientId);
               }
@@ -686,8 +695,10 @@ class AuthRepository extends ChangeNotifier {
             _connectionCode = null;
             notifyListeners();
 
-            // Auto-generate if we are the patient
-            if (currentRole == 'patient' && !_isGeneratingCode) {
+            // Auto-generate ONLY if we are the REAL patient (not emulating)
+            if (currentRole == 'patient' &&
+                _emulatedPatientId == null &&
+                !_isGeneratingCode) {
               debugPrint('Auto-generating first code from stream listener...');
               await generateConnectionCode(patientId: patientId);
             }
@@ -763,15 +774,38 @@ class AuthRepository extends ChangeNotifier {
 
   // Security PIN and Role Override Methods
 
-  void setRoleOverride(String? role, {String? patientId}) {
+  void setRoleOverride(String? role,
+      {String? patientId, Map<String, dynamic>? initialProfile}) async {
     _roleOverride = role;
     _emulatedPatientId = patientId;
 
-    // Clear profile so it can be reloaded for the right context
-    _patientProfile = null;
+    // Reset current state to force refresh and show loading immediately
+    _patientProfile = initialProfile;
+    _connectionCode = null;
     _cancelRealtimeListeners();
-
     notifyListeners();
+
+    if (role == 'patient' && patientId != null) {
+      // Start listening for real-time changes immediately
+      _setupRealtimeListeners();
+
+      // Eagerly fetch the current active code to avoid waiting for stream startup
+      try {
+        final code = await getActiveCodeForPatient(patientId);
+        if (code != null) {
+          _connectionCode = code;
+          notifyListeners();
+        }
+      } catch (e) {
+        debugPrint('Error eagerly fetching code in override: $e');
+      }
+
+      // If no initial profile was provided, fetch it now
+      if (_patientProfile == null) {
+        await getPatientProfile();
+        notifyListeners();
+      }
+    }
   }
 
   Future<void> updateSecurityPin(String pin) async {
