@@ -95,41 +95,134 @@ class ConfigTab extends StatelessWidget {
   }
 
   void _showSetPinDialog(BuildContext context, AuthRepository repo) {
-    final controller = TextEditingController();
+    final currentPinController = TextEditingController();
+    final newPinController = TextEditingController();
+    String? currentError;
+    String? newError;
+    bool loading = false;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Definir PIN de Segurança'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          obscureText: true,
-          maxLength: 4,
-          decoration: const InputDecoration(
-            labelText: 'Novo PIN (4 dígitos)',
-            hintText: 'Ex: 1234',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text(
+            'Alterar PIN de Segurança',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
           ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Para sua segurança, informe o PIN atual e o novo PIN de 4 dígitos.',
+                style: TextStyle(color: Colors.black54, fontSize: 14),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: currentPinController,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 4,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 4),
+                onChanged: (_) => setDialogState(() => currentError = null),
+                decoration: InputDecoration(
+                  labelText: 'PIN Atual',
+                  counterText: '',
+                  hintText: 'Digite o PIN atual',
+                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14, letterSpacing: 0),
+                  errorText: currentError,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: const Icon(Icons.lock_open_rounded, size: 20),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: newPinController,
+                keyboardType: TextInputType.number,
+                obscureText: true,
+                maxLength: 4,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 4),
+                onChanged: (_) => setDialogState(() => newError = null),
+                decoration: InputDecoration(
+                  labelText: 'Novo PIN',
+                  counterText: '',
+                  hintText: 'Digite o novo PIN de 4 dígitos',
+                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14, letterSpacing: 0),
+                  errorText: newError,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: loading ? null : () => Navigator.pop(context),
+              child: Text('Cancelar', style: TextStyle(color: Colors.grey.shade600)),
+            ),
+            ElevatedButton(
+              onPressed: loading
+                  ? null
+                  : () async {
+                      bool hasError = false;
+                      if (currentPinController.text.length != 4) {
+                        setDialogState(() => currentError = 'O PIN atual tem 4 dígitos');
+                        hasError = true;
+                      }
+                      if (newPinController.text.length != 4) {
+                        setDialogState(() => newError = 'O novo PIN deve ter 4 dígitos');
+                        hasError = true;
+                      }
+                      if (hasError) return;
+
+                      setDialogState(() => loading = true);
+                      try {
+                        // 1. Verify current PIN
+                        final isCorrect = await repo.verifySecurityPin(currentPinController.text);
+                        if (!isCorrect) {
+                          setDialogState(() {
+                            currentError = 'PIN atual incorreto';
+                            loading = false;
+                          });
+                          return;
+                        }
+
+                        // 2. Update to new PIN
+                        await repo.updateSecurityPin(newPinController.text);
+                        
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('PIN de segurança atualizado com sucesso!'),
+                              backgroundColor: Color(0xFF009688),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() {
+                          newError = 'Erro ao atualizar PIN';
+                          loading = false;
+                        });
+                      }
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF009688),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              child: loading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Salvar'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (controller.text.length == 4) {
-                await repo.updateSecurityPin(controller.text);
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('PIN atualizado com sucesso!')),
-                  );
-                }
-              }
-            },
-            child: const Text('Salvar'),
-          ),
-        ],
       ),
     );
   }
