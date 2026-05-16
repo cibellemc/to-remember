@@ -215,6 +215,19 @@ class AuthRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> isEmailRegistered(String email) async {
+    try {
+      final response = await _supabase.rpc(
+        'check_email_exists',
+        params: {'email_to_check': email.trim()},
+      );
+      return response == true;
+    } catch (e) {
+      debugPrint('Error checking email registration via RPC: $e');
+      return false;
+    }
+  }
+
   Future<Map<String, dynamic>?> getPatientProfile() async {
     final user = currentUser;
     if (user == null) return null;

@@ -84,16 +84,19 @@ class LoginViewModel extends ChangeNotifier {
 
   void setName(String value) {
     _name = value;
+    _nameError = null;
     notifyListeners();
   }
 
   void setEmail(String value) {
     _email = value;
+    _emailError = null;
     notifyListeners();
   }
 
   void setPassword(String value) {
     _password = value;
+    _passwordError = null;
     notifyListeners();
   }
 
@@ -105,6 +108,7 @@ class LoginViewModel extends ChangeNotifier {
 
   void setPatientName(String value) {
     _patientName = value;
+    _patientNameError = null;
     notifyListeners();
   }
 
@@ -115,6 +119,7 @@ class LoginViewModel extends ChangeNotifier {
 
   void setProfessionalRegistry(String value) {
     _professionalRegistry = value;
+    _registryError = null;
     notifyListeners();
   }
 
@@ -125,6 +130,7 @@ class LoginViewModel extends ChangeNotifier {
 
   void setSecurityPin(String value) {
     _securityPin = value;
+    _pinError = null;
     notifyListeners();
   }
 
@@ -216,8 +222,8 @@ class LoginViewModel extends ChangeNotifier {
   }
 
   // Navigation
-  void nextStep() {
-    if (validateCurrentStep()) {
+  Future<void> nextStep() async {
+    if (await validateCurrentStep()) {
       _currentStep++;
       notifyListeners();
     }
@@ -231,7 +237,7 @@ class LoginViewModel extends ChangeNotifier {
     }
   }
 
-  bool validateCurrentStep() {
+  Future<bool> validateCurrentStep() async {
     _clearErrors();
 
     if (_currentStep == 0) {
@@ -255,28 +261,62 @@ class LoginViewModel extends ChangeNotifier {
         ((!isLoginMode && _currentStep == 3) ||
             (isLoginMode && _currentStep == 2))) {
       bool isValid = true;
-      if (!isLoginMode && _name.trim().isEmpty) {
-        _nameError = 'Por favor, informe seu nome.';
-        isValid = false;
-      }
-      if (_email.trim().isEmpty || !_email.contains('@')) {
-        _emailError = 'Por favor, informe um email válido.';
-        isValid = false;
-      }
+      
       if (!isLoginMode) {
-        if (_password.length < 6) {
+        if (_name.trim().isEmpty) {
+          _nameError = 'Por favor, informe seu nome completo.';
+          isValid = false;
+        } else if (_name.trim().split(' ').length < 2) {
+          _nameError = 'Informe seu nome e sobrenome.';
+          isValid = false;
+        }
+      }
+      
+      final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+      if (_email.trim().isEmpty) {
+        _emailError = 'Por favor, informe seu e-mail.';
+        isValid = false;
+      } else if (!emailRegex.hasMatch(_email.trim())) {
+        _emailError = 'Por favor, informe um e-mail válido.';
+        isValid = false;
+      } else if (!isLoginMode) {
+        // Only check if email exists during registration
+        _isLoading = true;
+        notifyListeners();
+        try {
+          final isRegistered = await _authRepository.isEmailRegistered(_email);
+          if (isRegistered) {
+            _emailError = 'Este e-mail já está em uso. Tente outro ou faça login.';
+            isValid = false;
+          }
+        } finally {
+          _isLoading = false;
+          notifyListeners();
+        }
+      }
+
+      if (!isLoginMode) {
+        if (_password.isEmpty) {
+          _passwordError = 'Por favor, crie uma senha.';
+          isValid = false;
+        } else if (_password.length < 6) {
           _passwordError = 'A senha deve ter pelo menos 6 caracteres.';
           isValid = false;
         }
-        if (_password != _confirmPassword) {
+        
+        if (_confirmPassword.isEmpty) {
+          _confirmPasswordError = 'Confirme sua senha.';
+          isValid = false;
+        } else if (_password != _confirmPassword) {
           _confirmPasswordError = 'As senhas não coincidem.';
           isValid = false;
         }
       } else if (_password.isEmpty) {
-        _passwordError = 'Digite sua senha.';
+        _passwordError = 'Digite sua senha para entrar.';
         isValid = false;
       }
 
+      notifyListeners();
       return isValid;
     }
 
@@ -287,23 +327,27 @@ class LoginViewModel extends ChangeNotifier {
         _currentStep == 4) {
       bool isValid = true;
       if (_professionalRegistry.trim().isEmpty) {
-        _registryError = 'Por favor, informe seu CRM/Registro.';
+        _registryError = 'Informe seu CRM ou registro profissional.';
         isValid = false;
       }
+      notifyListeners();
       return isValid;
     }
 
-    // Step 3 (Register) or 4 (Professional): Security PIN validation
-    // Let's decide if PIN is always on Step 3 for everyone or separate.
-    // Based on RegistrationPage, Step 3 is BasicInfo. I'll add PIN there or in a new step.
-    // If I add a new step, I need to update totalSteps.
+    // PIN Step validation
     if (_selectedRole == 'caregiver' && !isLoginMode) {
       bool isPinStep = (_caregiverType == 'professional' && _currentStep == 5) || 
                        (_caregiverType == 'relative' && _currentStep == 4);
       
       if (isPinStep) {
+        if (_securityPin.isEmpty) {
+          _pinError = 'Por favor, crie um PIN.';
+          notifyListeners();
+          return false;
+        }
         if (_securityPin.length != 4) {
-          _pinError = 'O PIN deve ter 4 dígitos.';
+          _pinError = 'O PIN deve ter exatamente 4 dígitos.';
+          notifyListeners();
           return false;
         }
         return true;

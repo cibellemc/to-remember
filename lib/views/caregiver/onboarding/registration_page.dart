@@ -601,7 +601,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
       return const SizedBox.shrink();
     }
 
-    bool isValid = isLast ? vm.canSubmit : true;
+    bool isValid = true; // Always enable to allow validation feedback on click
 
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
@@ -636,7 +636,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
               onPressed: (!isValid || vm.isLoading)
                   ? null
                   : () async {
-                      if (!vm.validateCurrentStep()) return;
+                      if (!await vm.validateCurrentStep()) return;
                       if (isLast) {
                         final success = vm.isLoginMode 
                             ? await vm.login() 
