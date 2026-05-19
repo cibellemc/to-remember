@@ -408,16 +408,16 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.05),
+          color: color.withValues(alpha:0.05),
           borderRadius: BorderRadius.circular(_T.radiusCard),
-          border: Border.all(color: color.withOpacity(0.1)),
+          border: Border.all(color: color.withValues(alpha:0.1)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 22),
@@ -433,7 +433,7 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                 ),
               ),
             ),
-            Icon(Icons.arrow_forward_ios_rounded, size: 14, color: color.withOpacity(0.5)),
+            Icon(Icons.arrow_forward_ios_rounded, size: 14, color: color.withValues(alpha:0.5)),
           ],
         ),
       ),
@@ -453,6 +453,99 @@ class _ProfileHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textScale = MediaQuery.of(context).textScaler.scale(1.0);
+    final isLargeFont = textScale > 1.3;
+
+    // FIX #1: Avatar com semântica — o TalkBack vai ignorar as iniciais visuais
+    // e anunciar corretamente o nome completo do perfil.
+    final avatar = Semantics(
+      label: 'Foto de perfil de $name',
+      excludeSemantics: true,
+      child: Container(
+        width: 80,
+        height: 80,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const LinearGradient(
+            colors: [Color(0xFF26A69A), Color(0xFF00796B)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _T.primary.withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Text(
+            initials,
+            style: const TextStyle(
+              fontSize: 30,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: 1,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final infoColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Bom ver você,',
+          style: TextStyle(
+            fontSize: 14,
+            color: _T.textSecondary,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          name,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: _T.textPrimary,
+            height: 1.15,
+          ),
+        ),
+        const SizedBox(height: 10),
+        // FIX #2: Badge de papel com semântica — agrupa ícone + texto em
+        // uma única leitura contextual para o TalkBack.
+        Semantics(
+          label: 'Papel: Paciente verificado',
+          excludeSemantics: true,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: _T.primarySurface,
+              borderRadius: BorderRadius.circular(_T.radiusPill),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.verified_user_rounded, size: 14, color: _T.primaryDark),
+                SizedBox(width: 5),
+                Text(
+                  'Paciente',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: _T.primaryDark,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -460,95 +553,28 @@ class _ProfileHeaderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(_T.radiusCard),
         boxShadow: [
           BoxShadow(
-            color: _T.primary.withOpacity(0.08),
+            color: _T.primary.withValues(alpha: 0.08),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFF26A69A), Color(0xFF00796B)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: _T.primary.withOpacity(0.35),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                initials,
-                style: const TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: 1,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
+      child: isLargeFont
+          ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Bom ver você,',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: _T.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: _T.textPrimary,
-                    height: 1.15,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: _T.primarySurface,
-                    borderRadius: BorderRadius.circular(_T.radiusPill),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.verified_user_rounded, size: 14, color: _T.primaryDark),
-                      SizedBox(width: 5),
-                      Text(
-                        'Paciente',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: _T.primaryDark,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                avatar,
+                const SizedBox(height: 16),
+                infoColumn,
+              ],
+            )
+          : Row(
+              children: [
+                avatar,
+                const SizedBox(width: 20),
+                Expanded(child: infoColumn),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -568,7 +594,7 @@ class _EmptyConnectionsBanner extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha:0.04),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -628,52 +654,113 @@ class _EmptyConnectionsBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textScale = MediaQuery.of(context).textScaler.scale(1.0);
+    final isLargeFont = textScale > 1.3;
+
+    final qrIcon = const Icon(Icons.qr_code_rounded, color: _T.primaryDark, size: 28);
+
+    final codeSection = Column(
+      crossAxisAlignment: isLargeFont ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Código de Vínculo',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _T.textSecondary, letterSpacing: 0.5),
+        ),
+        const SizedBox(height: 2),
+        Semantics(
+          label: 'Código de vínculo: ${code.split("").join(" ")}, sufixo: ${suffix.split("").join(" ")}',
+          excludeSemantics: true,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: isLargeFont ? Alignment.center : Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  code,
+                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _T.primaryDark, letterSpacing: 4),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _T.primaryDark.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '#$suffix',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _T.primaryDark),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+
+    final copyButton = _IconCopyButton(onTap: onCopy);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
         color: _T.primarySurface,
         borderRadius: BorderRadius.circular(_T.radiusCard),
-        border: Border.all(color: _T.primaryLight.withOpacity(0.4), width: 1.5),
+        border: Border.all(color: _T.primaryLight.withValues(alpha: 0.4), width: 1.5),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.qr_code_rounded, color: _T.primaryDark, size: 28),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: isLargeFont
+          ? Column(
               children: [
-                const Text(
-                  'Código de Vínculo',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _T.textSecondary, letterSpacing: 0.5),
-                ),
-                const SizedBox(height: 2),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      code,
-                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _T.primaryDark, letterSpacing: 4),
-                    ),
+                    qrIcon,
                     const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: _T.primaryDark.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '#$suffix',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _T.primaryDark),
-                      ),
+                    const Text(
+                      'Código do Paciente',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: _T.primaryDark),
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                codeSection,
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: onCopy,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _T.primaryDark,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.copy_rounded, size: 20),
+                    label: const Text(
+                      'Copiar Código',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                qrIcon,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: codeSection,
+                  ),
+                ),
+                copyButton,
               ],
             ),
-          ),
-          _IconCopyButton(onTap: onCopy),
-        ],
-      ),
     );
   }
 }
@@ -691,7 +778,7 @@ class _CaregiversList extends StatelessWidget {
         borderRadius: BorderRadius.circular(_T.radiusCard),
         boxShadow: [
           BoxShadow(
-            color: _T.primary.withOpacity(0.06),
+            color: _T.primary.withValues(alpha:0.06),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -720,55 +807,83 @@ class _CaregiverTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textScale = MediaQuery.of(context).textScaler.scale(1.0);
+    final isLargeFont = textScale > 1.3;
+
     final name = caregiver['name'] ?? 'Membro';
     final role = caregiver['role'] as String?;
     final relation = role == 'professional' ? 'Profissional' : 'Familiar';
     final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Row(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _T.primary.withOpacity(0.15),
-              border: Border.all(color: _T.primary.withOpacity(0.4), width: 2),
+    final avatar = Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: _T.primary.withValues(alpha:0.15),
+        border: Border.all(color: _T.primary.withValues(alpha:0.4), width: 2),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _T.primary),
+        ),
+      ),
+    );
+
+    final badge = _CaregiverStatusBadge(status: caregiver['status'] ?? 'active');
+
+    final infoColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          name,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: _T.textPrimary),
+        ),
+        const SizedBox(height: 3),
+        Row(
+          children: [
+            const Icon(Icons.badge_rounded, size: 14, color: _T.textSecondary),
+            const SizedBox(width: 4),
+            Text(
+              relation,
+              style: const TextStyle(fontSize: 14, color: _T.textSecondary, fontWeight: FontWeight.w500),
             ),
-            child: Center(
-              child: Text(
-                initials,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _T.primary),
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: _T.textPrimary),
-                ),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    const Icon(Icons.badge_rounded, size: 14, color: _T.textSecondary),
-                    const SizedBox(width: 4),
-                    Text(
-                      relation,
-                      style: const TextStyle(fontSize: 14, color: _T.textSecondary, fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          _CaregiverStatusBadge(status: caregiver['status'] ?? 'active'),
+          ],
+        ),
+        if (isLargeFont) ...[
+          const SizedBox(height: 8),
+          badge,
         ],
+      ],
+    );
+
+    // FIX #5: O tile inteiro é agrupado em um único nó semântico.
+    // Sem isso, o TalkBack leria: "M" (inicial), "Nome", "Familiar", "Ativo"
+    // — quatro anúncios separados sem contexto. Agora lê tudo de uma vez.
+    final statusLabel = (caregiver['status'] ?? 'active') == 'active' ? 'ativo' : 'pausado';
+    return Semantics(
+      label: '$name, $relation, vínculo $statusLabel',
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: isLargeFont
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  avatar,
+                  const SizedBox(width: 16),
+                  Expanded(child: infoColumn),
+                ],
+              )
+            : Row(
+                children: [
+                  avatar,
+                  const SizedBox(width: 16),
+                  Expanded(child: infoColumn),
+                  badge,
+                ],
+              ),
       ),
     );
   }
@@ -781,30 +896,38 @@ class _CaregiverStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isActive = status == 'active';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: isActive ? _T.connectedBg : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(_T.radiusPill),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isActive ? Icons.check_circle_rounded : Icons.pause_circle_filled_rounded,
-            size: 13,
-            color: isActive ? _T.connected : Colors.grey.shade600,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            isActive ? 'Ativo' : 'Pausado',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+    // FIX #6: Badge de status com label contextual. Sem isso, o TalkBack
+    // anuncia apenas "Ativo" ou "Pausado" sem contexto de que é o status
+    // do vínculo daquele membro da equipe. Este widget é marcado com
+    // excludeSemantics pois o tile pai já agrega o status no seu label.
+    return Semantics(
+      label: 'Status do vínculo: ${isActive ? 'ativo' : 'pausado'}',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isActive ? _T.connectedBg : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(_T.radiusPill),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isActive ? Icons.check_circle_rounded : Icons.pause_circle_filled_rounded,
+              size: 13,
               color: isActive ? _T.connected : Colors.grey.shade600,
             ),
-          ),
-        ],
+            const SizedBox(width: 4),
+            Text(
+              isActive ? 'Ativo' : 'Pausado',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: isActive ? _T.connected : Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -819,17 +942,25 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(color: _T.primarySurface, borderRadius: BorderRadius.circular(10)),
-          child: Icon(icon, size: 18, color: _T.primaryDark),
-        ),
-        const SizedBox(width: 10),
-        Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _T.textPrimary)),
-      ],
+    // FIX #3: Agrupa ícone + texto em uma única leitura semântica.
+    // Sem isso, o TalkBack anunciaria o ícone separadamente ("ícone sem nome").
+    // O container de ícone agora usa padding em vez de tamanho fixo para
+    // escalar corretamente com zoom de acessibilidade.
+    return Semantics(
+      header: true,
+      label: label,
+      excludeSemantics: true,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(color: _T.primarySurface, borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, size: 18, color: _T.primaryDark),
+          ),
+          const SizedBox(width: 10),
+          Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _T.textPrimary)),
+        ],
+      ),
     );
   }
 }
@@ -842,13 +973,25 @@ class _IconCopyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(color: _T.primary.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
-        child: const Icon(Icons.copy_rounded, color: _T.primaryDark, size: 20),
+    // FIX #4: Substituído GestureDetector por Semantics + InkWell.
+    // GestureDetector é invisível para leitores de tela — não é anunciado
+    // como botão e não pode ser ativado por toque de acessibilidade.
+    // InkWell já aparece como elemento interativo na árvore semântica.
+    return Semantics(
+      button: true,
+      label: 'Copiar código de vínculo',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: _T.primary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(Icons.copy_rounded, color: _T.primaryDark, size: 20),
+        ),
       ),
     );
   }
