@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../memory_game_page.dart';
+import '../matching_game_page.dart';
 
 class GamesTab extends StatelessWidget {
   const GamesTab({super.key});
@@ -73,7 +75,10 @@ class GamesTab extends StatelessWidget {
                 'Encontre os pares de cartas iguais e treine sua memoria.',
             imagePath: 'images/game-memory.jpg',
             onTap: () {
-              // Navigate to memory game
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MemoryGamePage()),
+              );
             },
           ),
           const SizedBox(height: 24),
@@ -83,7 +88,10 @@ class GamesTab extends StatelessWidget {
             description: 'Veja uma carta e encontre a mesma entre as opcoes.',
             imagePath: 'images/game-matching.jpg',
             onTap: () {
-              // Navigate to matching game
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MatchingGamePage()),
+              );
             },
           ),
           const SizedBox(height: 32),
