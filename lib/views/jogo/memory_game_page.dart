@@ -61,6 +61,9 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
   List<_Card> _cards = [];
   List<double> _responseTimes = [];
 
+  /// IDs dos pares já usados nesta sessão (evita repetir os mesmos estímulos).
+  final Set<dynamic> _usedPairIds = {};
+
   int? _firstIdx;
   int? _secondIdx;
   bool _isChecking = false;
@@ -85,8 +88,17 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
 
   Future<void> _init() async {
     final repo = context.read<AuthRepository>();
-    final patientId = repo.patientProfile?['id']?.toString();
-    if (patientId == null) { Navigator.pop(context); return; }
+
+    // Após hot restart o perfil pode ainda não estar na memória — busca do banco.
+    String? patientId = repo.patientProfile?['id']?.toString();
+    if (patientId == null) {
+      await repo.getPatientProfile();
+      patientId = repo.patientProfile?['id']?.toString();
+    }
+    if (patientId == null) {
+      if (mounted) Navigator.pop(context);
+      return;
+    }
 
     _allStimuli = await repo.fetchStimuli();
     _progress   = await repo.getPatientGameProgress(patientId, 'memory');
@@ -135,10 +147,23 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
       _allStimuli, _currentLevel,
     );
 
-    final rng      = Random();
-    final selected = (List<Map<String, dynamic>>.from(pool)..shuffle(rng))
-        .take(pairCount)
-        .toList();
+    final rng = Random();
+
+    // Filtra pares ainda não usados nesta sessão
+    var available = pool.where((s) => !_usedPairIds.contains(s['id'])).toList();
+    // Se restar menos itens que o necessário, reinicia o ciclo
+    if (available.length < pairCount) {
+      _usedPairIds.clear();
+      available = List.from(pool);
+    }
+
+    available.shuffle(rng);
+    final selected = available.take(pairCount).toList();
+
+    // Registra os pares escolhidos como usados
+    for (final s in selected) {
+      _usedPairIds.add(s['id']);
+    }
 
     _cards = selected.expand((s) {
       final id    = s['id'].toString();
@@ -328,11 +353,10 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
   }
 
   Widget _buildGame() {
-    final pairCount = _pairCounts[(_currentLevel - 1).clamp(0, 4)];
+    final pairCount  = _pairCounts[(_currentLevel - 1).clamp(0, 4)];
     final totalCards = pairCount * 2;
-    // Columns: 2 for ≤8 cards, 4 for >8
+    // 2 colunas para níveis 1-3 (≤8 cartas), 4 colunas para níveis 4-5
     final cols = totalCards <= 8 ? 2 : 4;
-    final rows = (totalCards / cols).ceil();
 
     return Column(
       children: [
@@ -341,39 +365,21 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final W = constraints.maxWidth;
-                final H = constraints.maxHeight;
-                const spacing = 12.0;
-
-                final cellWidth = max(1.0, (W - (cols - 1) * spacing) / cols);
-                final cellHeight = max(1.0, (H - (rows - 1) * spacing) / rows);
-                final itemSize = max(1.0, min(cellWidth, cellHeight));
-
-                return GridView.builder(
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: cols,
-                    mainAxisSpacing: spacing,
-                    crossAxisSpacing: spacing,
-                    childAspectRatio: cellWidth / cellHeight,
-                  ),
-                  itemCount: _cards.length,
-                  itemBuilder: (context, i) {
-                    final card = _cards[i];
-                    return Center(
-                      child: SizedBox(
-                        width: itemSize,
-                        height: itemSize,
-                        child: _FlipCard(
-                          card: card,
-                          isFaceUp: card.faceUp || card.matched,
-                          onTap: () => _onCardTap(i),
-                        ),
-                      ),
-                    );
-                  },
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: cols,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.0,
+              ),
+              itemCount: _cards.length,
+              itemBuilder: (context, i) {
+                final card = _cards[i];
+                return _FlipCard(
+                  card: card,
+                  isFaceUp: card.faceUp || card.matched,
+                  onTap: () => _onCardTap(i),
                 );
               },
             ),

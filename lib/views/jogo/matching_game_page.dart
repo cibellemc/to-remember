@@ -49,6 +49,9 @@ class _MatchingGamePageState extends State<MatchingGamePage> {
   List<double> _responseTimes = [];
   DateTime? _roundStart;
 
+  /// IDs dos estímulos já usados como alvo nesta sessão.
+  final Set<dynamic> _usedTargetIds = {};
+
   // Feedback state
   int? _selectedIndex;
   bool? _selectedCorrect;
@@ -68,8 +71,17 @@ class _MatchingGamePageState extends State<MatchingGamePage> {
 
   Future<void> _init() async {
     final repo = context.read<AuthRepository>();
-    final patientId = repo.patientProfile?['id']?.toString();
-    if (patientId == null) { Navigator.pop(context); return; }
+
+    // Após hot restart o perfil pode ainda não estar na memória — busca do banco.
+    String? patientId = repo.patientProfile?['id']?.toString();
+    if (patientId == null) {
+      await repo.getPatientProfile();
+      patientId = repo.patientProfile?['id']?.toString();
+    }
+    if (patientId == null) {
+      if (mounted) Navigator.pop(context);
+      return;
+    }
 
     _allStimuli = await repo.fetchStimuli();
     _progress   = await repo.getPatientGameProgress(patientId, 'matching');
@@ -122,7 +134,14 @@ class _MatchingGamePageState extends State<MatchingGamePage> {
     if (pool.isEmpty) return;
 
     final rng = Random();
-    _target = pool[rng.nextInt(pool.length)];
+
+    // Filtra alvos ainda não usados nesta sessão
+    final available = pool.where((s) => !_usedTargetIds.contains(s['id'])).toList();
+    // Se todos já foram usados, reinicia o ciclo (jogo longo ou pool pequeno)
+    final candidatePool = available.isNotEmpty ? available : pool;
+
+    _target = candidatePool[rng.nextInt(candidatePool.length)];
+    _usedTargetIds.add(_target!['id']);
 
     final distractors = (List<Map<String, dynamic>>.from(pool)
           ..removeWhere((s) => s['id'] == _target!['id'])
@@ -252,6 +271,7 @@ class _MatchingGamePageState extends State<MatchingGamePage> {
         _mistakes = 0;
         _responseTimes = [];
         _initialLevel = _currentLevel;
+        _usedTargetIds.clear(); // nova sessão → alvos renovados
         _buildRound();
       });
     }

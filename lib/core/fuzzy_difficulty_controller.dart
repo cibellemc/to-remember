@@ -71,27 +71,32 @@ class FuzzyDifficultyController {
   static double computeBossLoad(double selectionScore) =>
       ((0.9 - selectionScore) / 0.4).clamp(0.0, 1.0);
 
-  /// Returns stimuli for a given level. Falls back to lowest-score stimuli
-  /// if the level's range yields fewer items than needed.
+  /// Returns stimuli for a given level.
+  /// If the level's score range yields fewer than [minRequired] items,
+  /// progressively widens the window by ±0.10 until enough are found,
+  /// falling back to the entire catalogue as a last resort.
   static List<Map<String, dynamic>> filterStimuliForLevel(
     List<Map<String, dynamic>> allStimuli,
-    int level,
-  ) {
+    int level, {
+    int minRequired = 8,
+  }) {
+    if (allStimuli.isEmpty) return [];
+
     final idx = (level - 1).clamp(0, 4);
-    final (minS, maxS) = _levelRanges[idx];
+    final (baseMin, baseMax) = _levelRanges[idx];
 
-    final filtered = allStimuli.where((s) {
-      final score = (s['selection_score'] as num?)?.toDouble() ?? 0.0;
-      return score >= minS && score < maxS;
-    }).toList();
+    for (double expand = 0.0; expand <= 0.50; expand += 0.10) {
+      final lo = (baseMin - expand).clamp(0.0, 1.0);
+      final hi = (baseMax + expand).clamp(0.0, 1.10);
+      final filtered = allStimuli.where((s) {
+        final score = (s['selection_score'] as num?)?.toDouble() ?? 0.0;
+        return score >= lo && score < hi;
+      }).toList();
+      if (filtered.length >= minRequired) return filtered;
+    }
 
-    if (filtered.isNotEmpty) return filtered;
-
-    // Fallback: return all sorted by score ascending (hardest)
-    return List.from(allStimuli)..sort(
-      (a, b) =>
-          (a['selection_score'] as num).compareTo(b['selection_score'] as num),
-    );
+    // Last resort: return everything
+    return List.from(allStimuli);
   }
 
   /// Computes std-dev of precision history.
