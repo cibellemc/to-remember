@@ -194,10 +194,10 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                         _CompactCodeCard(
                           key: const Key('card_codigo_vinculo'),
                           code: repo.connectionCode ?? '------',
-                          suffix: profile?['linking_suffix'] ?? '----',
+                          suffix: profile['linking_suffix'] ?? '----',
                           onCopy: () {
                             if (repo.connectionCode != null) {
-                              _copyCode('${repo.connectionCode} #${profile?['linking_suffix'] ?? ''}');
+                              _copyCode('${repo.connectionCode} #${profile['linking_suffix'] ?? ''}');
                             }
                           },
                         ),

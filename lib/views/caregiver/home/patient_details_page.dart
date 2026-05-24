@@ -145,7 +145,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
               const Text('Estágio do Alzheimer', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: selectedStage,
+                initialValue: selectedStage,
                 decoration: const InputDecoration(border: OutlineInputBorder()),
                 items: const [
                   DropdownMenuItem(value: 'inicial', child: Text('Inicial')),

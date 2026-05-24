@@ -42,7 +42,7 @@ class MyApp extends StatelessWidget {
           final user = authRepo.currentUser?.id ?? 'none';
           
           return MaterialApp(
-            key: ValueKey('app_$role\_$user'),
+            key: ValueKey('app_${role}_$user'),
             title: 'ToRemember',
             theme: AppTheme.theme,
             debugShowCheckedModeBanner: false,
