@@ -851,4 +851,101 @@ class AuthRepository extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // GAME METHODS
+  // ──────────────────────────────────────────────────────────────────────────
+
+  List<Map<String, dynamic>> _stimuliCache = [];
+
+  /// Fetches all stimuli from the `estimulos` table.
+  /// Results are cached in memory for the app session.
+  Future<List<Map<String, dynamic>>> fetchStimuli() async {
+    if (_stimuliCache.isNotEmpty) return _stimuliCache;
+    try {
+      final response = await _supabase
+          .from('estimulos')
+          .select('id, nome_arquivo, selection_score, url_imagem')
+          .order('selection_score', ascending: false);
+      _stimuliCache = List<Map<String, dynamic>>.from(response as List);
+    } catch (e) {
+      debugPrint('Error fetching stimuli: $e');
+    }
+    return _stimuliCache;
+  }
+
+  /// Fetches the current game progress record for a patient + game type.
+  Future<Map<String, dynamic>?> getPatientGameProgress(
+    String patientId,
+    String gameType,
+  ) async {
+    try {
+      return await _supabase
+          .from('patient_game_progress')
+          .select()
+          .eq('patient_id', patientId)
+          .eq('game_type', gameType)
+          .maybeSingle();
+    } catch (e) {
+      debugPrint('Error fetching game progress: $e');
+      return null;
+    }
+  }
+
+  /// Upserts the patient's game progress (level + fuzzy state).
+  Future<void> upsertPatientGameProgress({
+    required String patientId,
+    required String gameType,
+    required int currentLevel,
+    double? baselineResponseTime,
+    List<double>? precisionHistory,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'patient_id': patientId,
+        'game_type': gameType,
+        'current_level': currentLevel,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      };
+      if (baselineResponseTime != null) {
+        data['baseline_response_time'] = baselineResponseTime;
+      }
+      if (precisionHistory != null) {
+        data['precision_history'] = precisionHistory;
+      }
+      await _supabase.from('patient_game_progress').upsert(data);
+    } catch (e) {
+      debugPrint('Error upserting game progress: $e');
+    }
+  }
+
+  /// Saves a completed game session to `game_sessions`.
+  Future<void> saveGameSession({
+    required String patientId,
+    required String gameType,
+    required int initialLevel,
+    required int finalLevel,
+    required int hits,
+    required int mistakes,
+    required int avgResponseTimeMs,
+    required String fuzzyDecision,
+    Map<String, dynamic>? performanceData,
+  }) async {
+    try {
+      await _supabase.from('game_sessions').insert({
+        'patient_id': patientId,
+        'game_type': gameType,
+        'initial_level': initialLevel,
+        'final_level': finalLevel,
+        'hits': hits,
+        'mistakes': mistakes,
+        'avg_response_time_ms': avgResponseTimeMs,
+        'fuzzy_decision': fuzzyDecision,
+        'performance_data': performanceData,
+        'played_at': DateTime.now().toUtc().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Error saving game session: $e');
+    }
+  }
 }
