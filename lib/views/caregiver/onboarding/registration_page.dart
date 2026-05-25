@@ -353,7 +353,12 @@ class _RegistrationPageState extends State<RegistrationPage> {
             vm.setRole('caregiver');
             Future.delayed(
               const Duration(milliseconds: 400),
-              () => vm.nextStep(),
+              () {
+                if (!mounted) return;
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+              },
             );
           },
           primaryColor: primaryColor,
