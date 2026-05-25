@@ -13,99 +13,106 @@ class DashboardTab extends StatelessWidget {
     final primaryColor = const Color(0xFF009688);
     final secondaryColor = const Color(0xFFF0FDF4);
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+    return Column(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Olá, ${vm.authRepository.currentUser?.userMetadata?['full_name'] ?? 'Cuidador'}',
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Olá, ${vm.authRepository.currentUser?.userMetadata?['full_name'] ?? 'Cuidador'}',
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'Acompanhe seus pacientes',
+                          style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                        ),
+                      ],
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
-                  Text(
-                    'Acompanhe seus pacientes',
-                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: secondaryColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: Icon(Icons.refresh, color: primaryColor),
+                      onPressed: vm.fetchConnectedPatients,
+                    ),
                   ),
                 ],
               ),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                color: secondaryColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                icon: Icon(Icons.refresh, color: primaryColor),
-                onPressed: vm.fetchConnectedPatients,
-              ),
-            ),
-          ],
+              const SizedBox(height: 32),
+              if (vm.isLoading && vm.connectedPatients.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 40),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (vm.connectedPatients.isEmpty)
+                _buildEmptyState(context, vm, primaryColor)
+              else ...[
+                // Monitoramento Ativo
+                if (vm.activePatients.isNotEmpty) ...[
+                  const Text(
+                    'Monitoramento Ativo',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF475569),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ...vm.activePatients.map(
+                    (patient) => _buildPatientCard(context, patient, vm, primaryColor),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // Histórico de Pacientes (Archive)
+                if (vm.inactivePatients.isNotEmpty) ...[
+                  if (vm.activePatients.isNotEmpty) const Divider(),
+                  if (vm.activePatients.isNotEmpty) const SizedBox(height: 24),
+                  const Text(
+                    'Histórico de Pacientes',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                  const Text(
+                    'Pacientes com vínculo desativado',
+                    style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
+                  ),
+                  const SizedBox(height: 16),
+                  ...vm.inactivePatients.map(
+                    (patient) => _buildPatientCard(context, patient, vm, primaryColor,
+                        isInactive: true),
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ],
+            ],
+          ),
         ),
-        const SizedBox(height: 32),
-        if (vm.isLoading && vm.connectedPatients.isEmpty)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.only(top: 40),
-              child: CircularProgressIndicator(),
-            ),
-          )
-        else if (vm.connectedPatients.isEmpty)
-          _buildEmptyState(context, vm, primaryColor)
-        else ...[
-          // Monitoramento Ativo
-          if (vm.activePatients.isNotEmpty) ...[
-            const Text(
-              'Monitoramento Ativo',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF475569),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ...vm.activePatients.map(
-              (patient) => _buildPatientCard(context, patient, vm, primaryColor),
-            ),
-            const SizedBox(height: 24),
-          ],
-
-          _buildAddButton(context, vm, primaryColor),
-
-          // Histórico de Pacientes (Archive)
-          if (vm.inactivePatients.isNotEmpty) ...[
-            const SizedBox(height: 48),
-            const Divider(),
-            const SizedBox(height: 24),
-            const Text(
-              'Histórico de Pacientes',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF64748B),
-              ),
-            ),
-            const Text(
-              'Pacientes com vínculo desativado',
-              style: TextStyle(fontSize: 14, color: Color(0xFF94A3B8)),
-            ),
-            const SizedBox(height: 16),
-            ...vm.inactivePatients.map(
-              (patient) => _buildPatientCard(context, patient, vm, primaryColor,
-                  isInactive: true),
-            ),
-            const SizedBox(height: 32),
-          ],
-        ],
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: _buildAddButton(context, vm, primaryColor),
+        ),
       ],
     );
   }
@@ -158,8 +165,6 @@ class DashboardTab extends StatelessWidget {
               height: 1.5,
             ),
           ),
-          const SizedBox(height: 32),
-          _buildAddButton(context, vm, primaryColor),
         ],
       ),
     );
