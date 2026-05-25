@@ -248,6 +248,22 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
         elevation: 0,
         foregroundColor: Colors.white,
       ),
+      floatingActionButton: patient['status'] == 'inactive'
+          ? FloatingActionButton.extended(
+              onPressed: () => _showReactivationDialog(context, vm, patient),
+              icon: const Icon(Icons.restore_rounded),
+              label: const Text('Reativar Paciente'),
+              backgroundColor: const Color(0xFF009688),
+              foregroundColor: Colors.white,
+            )
+          : FloatingActionButton.extended(
+              onPressed: () => _showDisconnectConfirm(context, patient, vm),
+              icon: const Icon(Icons.link_off, size: 20),
+              label: const Text('Desconectar'),
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.red,
+              elevation: 2,
+            ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -495,36 +511,8 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                     const SizedBox(height: 32),
                   ],
 
-                  const SizedBox(height: 48),
-                  SizedBox(
-                    width: double.infinity,
-                    child: patient['status'] == 'inactive'
-                      ? ElevatedButton.icon(
-                          onPressed: () => _showReactivationDialog(context, vm, patient),
-                          icon: const Icon(Icons.restore_rounded),
-                          label: const Text('Reativar Paciente'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF009688),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
-                        )
-                      : TextButton.icon(
-                          onPressed: () => _showDisconnectConfirm(context, patient, vm),
-                          icon: const Icon(Icons.link_off, size: 20),
-                          label: const Text('Desconectar Paciente'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.red.shade700,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              side: BorderSide(color: Colors.red.shade100),
-                            ),
-                          ),
-                        ),
-                  ),
-                  const SizedBox(height: 40),
+                  // Espaço para o FAB não sobrepor o conteúdo
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
