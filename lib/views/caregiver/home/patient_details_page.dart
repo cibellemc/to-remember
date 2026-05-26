@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../view_models/caregiver_viewmodel.dart';
-import '../../jogo/jogo_page.dart';
 
 class PatientDetailsPage extends StatefulWidget {
   const PatientDetailsPage({super.key});
@@ -188,7 +187,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -200,7 +199,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 24),
@@ -305,7 +304,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                   Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: CircleAvatar(
@@ -350,7 +349,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                         padding:
                             const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Text(
@@ -368,7 +367,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                           padding:
                               const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.amber.withOpacity(0.9),
+                            color: Colors.amber.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Row(
@@ -535,7 +534,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isMe ? const Color(0xFF009688).withOpacity(0.3) : const Color(0xFFF1F5F9)),
+        border: Border.all(color: isMe ? const Color(0xFF009688).withValues(alpha: 0.3) : const Color(0xFFF1F5F9)),
       ),
       child: Row(
         children: [

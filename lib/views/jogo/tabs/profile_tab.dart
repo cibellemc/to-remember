@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../data/repositories/auth_repository.dart';
-import '../../caregiver/home/caregiver_home_page.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DESIGN TOKENS
