@@ -640,6 +640,12 @@ class DashboardTab extends StatelessWidget {
               style: const TextStyle(color: Colors.red, fontSize: 13),
             ),
           ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 16, color: Colors.red),
+            onPressed: () => vm.clearError(),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
         ],
       ),
     );

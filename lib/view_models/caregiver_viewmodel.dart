@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../data/repositories/auth_repository.dart';
 
@@ -26,6 +27,7 @@ class CaregiverViewModel extends ChangeNotifier {
 
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
+  Timer? _errorTimer;
 
   Future<void> fetchConnectedPatients() async {
     _isLoading = true;
@@ -226,10 +228,20 @@ class CaregiverViewModel extends ChangeNotifier {
   void setErrorMessage(String? msg) {
     _errorMessage = msg;
     notifyListeners();
+
+    _errorTimer?.cancel();
+    if (msg != null) {
+      _errorTimer = Timer(const Duration(seconds: 5), () {
+        clearError();
+      });
+    }
   }
 
   void clearError() {
-    _errorMessage = null;
-    notifyListeners();
+    if (_errorMessage != null) {
+      _errorMessage = null;
+      notifyListeners();
+    }
+    _errorTimer?.cancel();
   }
 }
