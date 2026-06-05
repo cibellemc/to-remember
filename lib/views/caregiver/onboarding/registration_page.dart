@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../view_models/login_viewmodel.dart';
 import '../../jogo/jogo_page.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../home/caregiver_home_page.dart';
-import '../../login/login_page.dart';
 
 class RegistrationPage extends StatefulWidget {
   const RegistrationPage({super.key});
@@ -93,13 +93,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: primaryColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.favorite, color: Colors.white, size: 20),
+            SvgPicture.asset(
+              'images/logo.svg',
+              colorFilter: ColorFilter.mode(primaryColor, BlendMode.srcIn),
+              width: 40,
+              height: 40,
             ),
             const SizedBox(width: 8),
             const Text(
@@ -725,7 +723,6 @@ class _OptionCard extends StatelessWidget {
   final Color primaryColor;
 
   const _OptionCard({
-    super.key,
     required this.title,
     required this.subtitle,
     required this.icon,

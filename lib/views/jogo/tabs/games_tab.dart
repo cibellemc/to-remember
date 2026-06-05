@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../memory_game_page.dart';
 import '../matching_game_page.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class GamesTab extends StatelessWidget {
   const GamesTab({super.key});
@@ -24,17 +25,11 @@ class GamesTab extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: primaryColor,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.favorite,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                    SvgPicture.asset(
+                      'images/logo.svg',
+                      colorFilter: ColorFilter.mode(primaryColor, BlendMode.srcIn),
+                      width: 40,
+                      height: 40,
                     ),
                     const SizedBox(width: 8),
                     const Text(

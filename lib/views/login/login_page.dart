@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../view_models/login_viewmodel.dart';
 import '../caregiver/home/caregiver_home_page.dart';
 import '../jogo/jogo_page.dart';
@@ -59,13 +60,11 @@ class _LoginPageState extends State<LoginPage> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: primaryColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.favorite, color: Colors.white, size: 20),
+            SvgPicture.asset(
+              'images/logo.svg',
+              colorFilter: ColorFilter.mode(primaryColor, BlendMode.srcIn),
+              width: 40,
+              height: 40,
             ),
             const SizedBox(width: 8),
             const Text(
