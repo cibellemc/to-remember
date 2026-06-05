@@ -246,30 +246,21 @@ class LoginViewModel extends ChangeNotifier {
 
     if (_selectedRole == 'patient') return true;
 
-    // Step 1: Login or Register choice?
+    // Step 1: Caregiver Type (Familiar/Médico)
     if (_selectedRole == 'caregiver' && _currentStep == 1) {
-      return isLoginModeRaw != null;
-    }
-
-    // Step 2: Caregiver Profile (Familiar/Médico) (Only if Register Mode)
-    if (_selectedRole == 'caregiver' && _currentStep == 2 && !isLoginMode) {
       return _caregiverType != null;
     }
 
-    // Step 3 (Register) or 2 (Login): Basic Info
-    if (_selectedRole == 'caregiver' &&
-        ((!isLoginMode && _currentStep == 3) ||
-            (isLoginMode && _currentStep == 2))) {
+    // Step 2: Basic Info (Name, Email, Pass, ConfirmPass)
+    if (_selectedRole == 'caregiver' && _currentStep == 2) {
       bool isValid = true;
       
-      if (!isLoginMode) {
-        if (_name.trim().isEmpty) {
-          _nameError = 'Por favor, informe seu nome completo.';
-          isValid = false;
-        } else if (_name.trim().split(' ').length < 2) {
-          _nameError = 'Informe seu nome e sobrenome.';
-          isValid = false;
-        }
+      if (_name.trim().isEmpty) {
+        _nameError = 'Por favor, informe seu nome completo.';
+        isValid = false;
+      } else if (_name.trim().split(' ').length < 2) {
+        _nameError = 'Informe seu nome e sobrenome.';
+        isValid = false;
       }
       
       final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
@@ -279,8 +270,8 @@ class LoginViewModel extends ChangeNotifier {
       } else if (!emailRegex.hasMatch(_email.trim())) {
         _emailError = 'Por favor, informe um e-mail válido.';
         isValid = false;
-      } else if (!isLoginMode) {
-        // Only check if email exists during registration
+      } else {
+        // Check if email exists during registration
         _isLoading = true;
         notifyListeners();
         try {
@@ -295,24 +286,19 @@ class LoginViewModel extends ChangeNotifier {
         }
       }
 
-      if (!isLoginMode) {
-        if (_password.isEmpty) {
-          _passwordError = 'Por favor, crie uma senha.';
-          isValid = false;
-        } else if (_password.length < 6) {
-          _passwordError = 'A senha deve ter pelo menos 6 caracteres.';
-          isValid = false;
-        }
-        
-        if (_confirmPassword.isEmpty) {
-          _confirmPasswordError = 'Confirme sua senha.';
-          isValid = false;
-        } else if (_password != _confirmPassword) {
-          _confirmPasswordError = 'As senhas não coincidem.';
-          isValid = false;
-        }
-      } else if (_password.isEmpty) {
-        _passwordError = 'Digite sua senha para entrar.';
+      if (_password.isEmpty) {
+        _passwordError = 'Por favor, crie uma senha.';
+        isValid = false;
+      } else if (_password.length < 6) {
+        _passwordError = 'A senha deve ter pelo menos 6 caracteres.';
+        isValid = false;
+      }
+      
+      if (_confirmPassword.isEmpty) {
+        _confirmPasswordError = 'Confirme sua senha.';
+        isValid = false;
+      } else if (_password != _confirmPassword) {
+        _confirmPasswordError = 'As senhas não coincidem.';
         isValid = false;
       }
 
@@ -320,11 +306,10 @@ class LoginViewModel extends ChangeNotifier {
       return isValid;
     }
 
-    // Step 4: Professional info
+    // Step 3: Professional info
     if (_selectedRole == 'caregiver' &&
-        !isLoginMode &&
         _caregiverType == 'professional' &&
-        _currentStep == 4) {
+        _currentStep == 3) {
       bool isValid = true;
       if (_professionalRegistry.trim().isEmpty) {
         _registryError = 'Informe seu CRM ou registro profissional.';
@@ -335,9 +320,9 @@ class LoginViewModel extends ChangeNotifier {
     }
 
     // PIN Step validation
-    if (_selectedRole == 'caregiver' && !isLoginMode) {
-      bool isPinStep = (_caregiverType == 'professional' && _currentStep == 5) || 
-                       (_caregiverType == 'relative' && _currentStep == 4);
+    if (_selectedRole == 'caregiver') {
+      bool isPinStep = (_caregiverType == 'professional' && _currentStep == 4) || 
+                       (_caregiverType == 'relative' && _currentStep == 3);
       
       if (isPinStep) {
         if (_securityPin.isEmpty) {
