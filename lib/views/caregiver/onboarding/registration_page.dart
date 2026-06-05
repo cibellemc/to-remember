@@ -662,9 +662,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
                             : await vm.finishRegistration();
                             
                         if (success && mounted) {
-                          await Future.delayed(const Duration(milliseconds: 600));
-                          if (!mounted) return;
-
                           if (vm.selectedRole == 'patient') {
                             Navigator.of(context).pushReplacement(
                               MaterialPageRoute(builder: (_) => const PatientHomePage()),
@@ -676,7 +673,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
                           }
                         }
                       } else {
-                        await Future.delayed(const Duration(milliseconds: 400));
                         vm.nextStep();
                       }
                     },

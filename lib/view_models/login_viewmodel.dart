@@ -390,10 +390,7 @@ class LoginViewModel extends ChangeNotifier {
         // Reuse session if exists, otherwise sign in
         final currentUser = _authRepository.currentUser;
         if (currentUser == null) {
-          String displayName = _name.trim();
-          if (displayName.isEmpty) {
-            displayName = 'Paciente #${Random().nextInt(10000).toString().padLeft(4, '0')}';
-          }
+          final displayName = 'Paciente #${Random().nextInt(10000).toString().padLeft(4, '0')}';
           await _authRepository.signInAnonymously(
             role: 'patient',
             fullName: displayName,
