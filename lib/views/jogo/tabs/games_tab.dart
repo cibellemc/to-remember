@@ -25,29 +25,29 @@ class GamesTab extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
                         color: primaryColor,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
                         Icons.favorite,
                         color: Colors.white,
-                        size: 28,
+                        size: 20,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Text(
+                    const SizedBox(width: 8),
+                    const Text(
                       'To Remember',
                       style: TextStyle(
-                        fontSize: 24,
+                        color: Colors.black,
                         fontWeight: FontWeight.bold,
-                        color: Colors.blueGrey.shade900,
+                        fontSize: 18,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 32),
                 Text(
                   'Escolha um jogo para exercitar a mente.',
                   textAlign: TextAlign.center,
