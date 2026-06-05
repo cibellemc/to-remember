@@ -19,12 +19,12 @@ class LoginViewModel extends ChangeNotifier {
 
   int get totalSteps {
     if (_selectedRole == 'patient') return 1;
-    if (isLoginMode) return 3; // Role (0), Mode (1), LoginInfo (2)
+    if (isLoginMode) return 3; // Role (0), Mode (1), LoginInfo (2) (not used for Caregiver anymore)
     if (_selectedRole == 'caregiver') {
-      if (_caregiverType == 'professional') return 6; // Role(0), Mode(1), Type(2), Basic(3), Prof(4), PIN(5)
-      return 5; // Role(0), Mode(1), Type(2), Basic(3), PIN(4)
+      if (_caregiverType == 'professional') return 5; // Role(0), Type(1), Basic(2), Prof(3), PIN(4)
+      return 4; // Role(0), Type(1), Basic(2), PIN(3)
     }
-    return 5; // Default safety
+    return 4; // Default safety
   }
 
   // Selected Role

@@ -189,14 +189,10 @@ class _LoginPageState extends State<LoginPage> {
                 child: GestureDetector(
                   onTap: () {
                     vm.setLoginMode(false);
-                    // If we come from RegistrationPage Step 1, advance to Step 2
-                    // If we come from Logout, we need to set role and advance.
+                    // Pula para a etapa de "Qual seu perfil?" (Step 1)
                     if (vm.currentStep == 0) {
                       vm.setRole('caregiver');
                       vm.nextStep(); // to Step 1
-                      vm.nextStep(); // to Step 2
-                    } else if (vm.currentStep == 1) {
-                      vm.nextStep();
                     }
                     
                     if (Navigator.of(context).canPop()) {

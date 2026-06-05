@@ -215,20 +215,15 @@ class _RegistrationPageState extends State<RegistrationPage> {
       case 0:
         return _buildRoleSelection(context, vm, primaryColor);
       case 1:
-        return _buildAuthModeSelection(vm, primaryColor);
-      case 2:
-        if (vm.isLoginMode) {
-          return _buildBasicInfo(vm, primaryColor); // In login mode, this only shows Email/Pass
-        }
         return _buildCaregiverTypeSelection(vm, primaryColor);
-      case 3:
+      case 2:
         return _buildBasicInfo(vm, primaryColor);
-      case 4:
+      case 3:
         if (vm.caregiverType == 'professional') {
           return _buildProfessionalInfo(vm, primaryColor);
         }
         return _buildPinStep(vm, primaryColor);
-      case 5:
+      case 4:
         return _buildPinStep(vm, primaryColor);
       default:
         return const SizedBox();
@@ -251,7 +246,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
         const SizedBox(height: 24),
         _SegmentedProgress(
           stepNames: _getStepNames(vm),
-          currentStepIndex: vm.caregiverType == 'professional' ? 5 : 4,
+          currentStepIndex: vm.currentStep - 1,
           primaryColor: primaryColor,
         ),
         const SizedBox(height: 32),
@@ -287,51 +282,6 @@ class _RegistrationPageState extends State<RegistrationPage> {
               ),
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAuthModeSelection(LoginViewModel vm, Color primaryColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Já possui uma conta?',
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-        ),
-        // const SizedBox(height: 12),
-        // const Text(
-        //   'Escolha uma das opções abaixo para continuar.',
-        //   style: TextStyle(fontSize: 18, color: Colors.black54),
-        // ),
-        const SizedBox(height: 32),
-        _OptionCard(
-          title: 'Sou novo por aqui',
-          subtitle: 'Quero criar uma conta e começar agora.',
-          icon: Icons.person_add_alt_1_outlined,
-          isSelected: vm.isLoginModeRaw == false,
-          onTap: () {
-            vm.setLoginMode(false);
-            Future.delayed(
-              const Duration(milliseconds: 400),
-              () => vm.nextStep(),
-            );
-          },
-          primaryColor: primaryColor,
-        ),
-        const SizedBox(height: 16),
-        _OptionCard(
-          title: 'Já tenho uma conta',
-          subtitle: 'Quero entrar com meu e-mail e senha.',
-          icon: Icons.login_outlined,
-          isSelected: vm.isLoginModeRaw == true,
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const LoginPage()),
-            );
-          },
-          primaryColor: primaryColor,
         ),
       ],
     );
@@ -377,9 +327,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
               const Duration(milliseconds: 100),
               () {
                 if (!mounted) return;
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                );
+                vm.nextStep();
               },
             );
           },
@@ -449,7 +397,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
         const SizedBox(height: 24),
         _SegmentedProgress(
           stepNames: _getStepNames(vm),
-          currentStepIndex: 1, // Adjusted index
+          currentStepIndex: vm.currentStep - 1,
           primaryColor: primaryColor,
         ),
         const SizedBox(height: 24),
@@ -491,26 +439,24 @@ class _RegistrationPageState extends State<RegistrationPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          vm.isLoginMode ? 'Acesse sua conta' : 'Informações básicas',
+          'Informações básicas',
           style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 24),
         _SegmentedProgress(
           stepNames: _getStepNames(vm),
-          currentStepIndex: vm.isLoginMode ? 2 : 2, // In login mode, this is the 3rd step (index 2)
+          currentStepIndex: vm.currentStep - 1,
           primaryColor: primaryColor,
         ),
         const SizedBox(height: 24),
-        if (!vm.isLoginMode) ...[
-          _buildField(
-            label: 'Nome completo',
-            hint: 'Ex: Maria da Silva',
-            controller: _nameController,
-            onChanged: vm.setName,
-            error: vm.nameError,
-          ),
-          const SizedBox(height: 20),
-        ],
+        _buildField(
+          label: 'Nome completo',
+          hint: 'Ex: Maria da Silva',
+          controller: _nameController,
+          onChanged: vm.setName,
+          error: vm.nameError,
+        ),
+        const SizedBox(height: 20),
         _buildField(
           label: 'E-mail',
           hint: 'Ex: maria@email.com',
@@ -542,29 +488,27 @@ class _RegistrationPageState extends State<RegistrationPage> {
           ),
         ),
         const SizedBox(height: 20),
-        if (!vm.isLoginMode) ...[
-          _buildField(
-            label: 'Confirmar senha',
-            hint: 'Repita sua senha',
-            controller: _confirmPasswordController,
-            onChanged: vm.setConfirmPassword,
-            error: vm.confirmPasswordError,
-            obscureText: _obscureConfirmPassword,
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscureConfirmPassword
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-                size: 20,
-              ),
-              onPressed: () {
-                setState(() {
-                  _obscureConfirmPassword = !_obscureConfirmPassword;
-                });
-              },
+        _buildField(
+          label: 'Confirmar senha',
+          hint: 'Repita sua senha',
+          controller: _confirmPasswordController,
+          onChanged: vm.setConfirmPassword,
+          error: vm.confirmPasswordError,
+          obscureText: _obscureConfirmPassword,
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscureConfirmPassword
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+              size: 20,
             ),
+            onPressed: () {
+              setState(() {
+                _obscureConfirmPassword = !_obscureConfirmPassword;
+              });
+            },
           ),
-        ],
+        ),
       ],
     );
   }
@@ -580,7 +524,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
         const SizedBox(height: 24),
         _SegmentedProgress(
           stepNames: _getStepNames(vm),
-          currentStepIndex: 3, // Adjusted index
+          currentStepIndex: vm.currentStep - 1,
           primaryColor: primaryColor,
         ),
         const SizedBox(height: 24),
@@ -603,10 +547,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   }
 
   List<String> _getStepNames(LoginViewModel vm) {
-    if (vm.isLoginMode) {
-      return ['Início', 'Tipo', 'Login'];
-    }
-    final names = <String>['Papel', 'Acesso', 'Tipo'];
+    final names = <String>['Tipo'];
     names.add('Dados');
     if (vm.caregiverType == 'professional') names.add('Profis.');
     names.add('PIN');
@@ -668,12 +609,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
     if (vm.isLoginMode) {
       isLast = vm.currentStep == 2;
     } else {
-      isLast = (vm.caregiverType == 'relative' && vm.currentStep == 4) ||
-               (vm.caregiverType == 'professional' && vm.currentStep == 5);
+      isLast = (vm.caregiverType == 'relative' && vm.currentStep == 3) ||
+               (vm.caregiverType == 'professional' && vm.currentStep == 4);
     }
 
-    // Role selection step (0) has its own navigation via cards
-    if (vm.currentStep == 0 || vm.currentStep == 1 || (vm.currentStep == 2 && !vm.isLoginMode)) {
+    if (vm.currentStep == 0 || vm.currentStep == 1) {
       return const SizedBox.shrink();
     }
 
