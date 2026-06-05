@@ -68,7 +68,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
     }
 
     return PopScope(
-      canPop: vm.currentStep > 0,
+      canPop: vm.currentStep == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         if (vm.currentStep > 0) {
@@ -78,16 +78,15 @@ class _RegistrationPageState extends State<RegistrationPage> {
       child: Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        leading: IconButton(
+        automaticallyImplyLeading: false,
+        leading: vm.currentStep > 0
+            ? IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.black54),
                 onPressed: () {
-                  if (vm.currentStep > 0) {
-                    vm.previousStep();
-                  } else {
-                    Navigator.of(context).pop();
-                  }
+                  vm.previousStep();
                 },
-              ),
+              )
+            : null,
         backgroundColor: Colors.white,
         elevation: 0,
         title: Row(

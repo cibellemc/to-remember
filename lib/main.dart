@@ -8,7 +8,8 @@ import 'data/repositories/auth_repository.dart';
 import 'view_models/login_viewmodel.dart';
 import 'views/jogo/jogo_page.dart';
 import 'views/caregiver/home/caregiver_home_page.dart';
-import 'views/onboarding/onboarding_page.dart';
+// import 'views/onboarding/onboarding_page.dart';
+import 'views/caregiver/onboarding/registration_page.dart';
 import 'views/login/login_page.dart';
 
 Future<void> main() async {
@@ -58,7 +59,7 @@ class MyApp extends StatelessWidget {
     if (user == null) {
       // Se já houve uma sessão ativa antes (ex: fez logout), vai para login.
       // Se é a primeira vez no app, vai para o onboarding.
-      return repo.hasHadSession ? const LoginPage() : const OnboardingPage();
+      return repo.hasHadSession ? const LoginPage() : const RegistrationPage(); // const OnboardingPage();
     }
 
     final role = repo.currentRole;

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../view_models/login_viewmodel.dart';
 import '../caregiver/home/caregiver_home_page.dart';
 import '../jogo/jogo_page.dart';
-import '../onboarding/onboarding_page.dart';
+// import '../onboarding/onboarding_page.dart';
 import '../caregiver/onboarding/registration_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -51,7 +51,7 @@ class _LoginPageState extends State<LoginPage> {
               Navigator.of(context).pop();
             } else {
               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const OnboardingPage()),
+                MaterialPageRoute(builder: (_) => const RegistrationPage()), // const OnboardingPage()
               );
             }
           },
