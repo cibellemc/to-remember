@@ -91,6 +91,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
         elevation: 0,
         title: Row(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
               padding: const EdgeInsets.all(4),
@@ -112,6 +113,34 @@ class _RegistrationPageState extends State<RegistrationPage> {
           ],
         ),
         centerTitle: true,
+        actions: [
+          if (vm.currentStep == 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: IconButton(
+                icon: const Icon(Icons.help_outline, color: Colors.black54, size: 28),
+                onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Sobre o App'),
+                    content: const Text(
+                      'O To Remember é uma ferramenta para auxiliar no tratamento e acompanhamento de pacientes com Alzheimer.\n\n'
+                      '• JOGAR: Para o paciente realizar os exercícios de estímulo cognitivo.\n\n'
+                      '• ACOMPANHAR: Para cuidadores, familiares ou profissionais de saúde monitorarem o progresso do paciente.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Entendi'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -184,7 +213,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   ) {
     switch (vm.currentStep) {
       case 0:
-        return _buildRoleSelection(vm, primaryColor);
+        return _buildRoleSelection(context, vm, primaryColor);
       case 1:
         return _buildAuthModeSelection(vm, primaryColor);
       case 2:
@@ -308,22 +337,19 @@ class _RegistrationPageState extends State<RegistrationPage> {
     );
   }
 
-  Widget _buildRoleSelection(LoginViewModel vm, Color primaryColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Como você quer usar o app?',
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 32),
-        _OptionCard(
-          key: const Key('choice_patient'),
-          title: 'Quero jogar',
-          subtitle: 'Sou paciente ou quero usar os jogos e atividades do app.',
-          icon: Icons.videogame_asset_outlined,
-          isSelected: vm.selectedRole == 'patient',
-          onTap: () async {
+  Widget _buildRoleSelection(BuildContext context, LoginViewModel vm, Color primaryColor) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 450),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(height: 40),
+            _buildBigActionCard(
+              title: 'JOGAR',
+              icon: Icons.extension,
+              color: const Color(0xFF1565C0), // Blue 800 (Alto contraste AAA)
+              onTap: () async {
             vm.setRole('patient');
             final success = await vm.finishRegistration();
             if (success && mounted) {
@@ -339,19 +365,16 @@ class _RegistrationPageState extends State<RegistrationPage> {
               );
             }
           },
-          primaryColor: primaryColor,
         ),
-        const SizedBox(height: 16),
-        _OptionCard(
-          key: const Key('choice_caregiver'),
-          title: 'Sou cuidador',
-          subtitle: 'Cuido de alguém e quero acompanhar o progresso.',
-          icon: Icons.person_search_outlined,
-          isSelected: vm.selectedRole == 'caregiver',
+        const SizedBox(height: 24),
+        _buildBigActionCard(
+          title: 'ACOMPANHAR\nPACIENTE',
+          icon: Icons.medical_services_outlined,
+          color: const Color(0xFF00695C), // Teal 800 (Alto contraste AAA)
           onTap: () {
             vm.setRole('caregiver');
             Future.delayed(
-              const Duration(milliseconds: 400),
+              const Duration(milliseconds: 100),
               () {
                 if (!mounted) return;
                 Navigator.of(context).push(
@@ -360,9 +383,58 @@ class _RegistrationPageState extends State<RegistrationPage> {
               },
             );
           },
-          primaryColor: primaryColor,
+        ),
+        const SizedBox(height: 48),
+        Text(
+          'To Remember © 2026',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey.shade400,
+          ),
         ),
       ],
+    ),
+    ),
+    );
+  }
+
+  Widget _buildBigActionCard({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: color,
+      borderRadius: BorderRadius.circular(24),
+      elevation: 4, // Adiciona um pequeno sombreamento para destacar o clique (acessibilidade visual)
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 88, color: Colors.white),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                  color: Colors.white,
+                  height: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
