@@ -130,7 +130,7 @@ class DashboardTab extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -227,8 +227,8 @@ class DashboardTab extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isInactive
-                ? Colors.grey.withOpacity(0.05)
-                : primaryColor.withOpacity(0.05),
+                ? Colors.grey.withValues(alpha: 0.05)
+                : primaryColor.withValues(alpha: 0.05),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -265,7 +265,7 @@ class DashboardTab extends StatelessWidget {
                       gradient: LinearGradient(
                         colors: isInactive
                             ? [Colors.grey.shade400, Colors.grey.shade500]
-                            : [primaryColor.withOpacity(0.8), primaryColor],
+                            : [primaryColor.withValues(alpha: 0.8), primaryColor],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -273,8 +273,8 @@ class DashboardTab extends StatelessWidget {
                       boxShadow: [
                         BoxShadow(
                           color: isInactive
-                              ? Colors.grey.withOpacity(0.3)
-                              : primaryColor.withOpacity(0.3),
+                              ? Colors.grey.withValues(alpha: 0.3)
+                              : primaryColor.withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -321,7 +321,7 @@ class DashboardTab extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                     color: const Color(0xFF009688)
-                                        .withOpacity(0.3),
+                                        .withValues(alpha: 0.3),
                                   ),
                                 ),
                                 child: const Row(
@@ -812,9 +812,9 @@ class DashboardTab extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: primaryColor.withOpacity(0.05),
+            color: primaryColor.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: primaryColor.withOpacity(0.1)),
+            border: Border.all(color: primaryColor.withValues(alpha: 0.1)),
           ),
           child: Row(
             children: [
@@ -884,7 +884,7 @@ class DashboardTab extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -892,7 +892,7 @@ class DashboardTab extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 24),
@@ -907,7 +907,7 @@ class DashboardTab extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: color.withOpacity(0.5)),
+            Icon(Icons.chevron_right_rounded, color: color.withValues(alpha: 0.5)),
           ],
         ),
       ),

@@ -218,7 +218,7 @@ class _PatientHomePageState extends State<PatientHomePage> {
               decoration: BoxDecoration(
                 border: const Border(top: BorderSide(color: Color(0xFFE2E8F0), width: 2)),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -4))
                 ],
               ),
               child: BottomNavigationBar(
@@ -270,7 +270,7 @@ class _PatientHomePageState extends State<PatientHomePage> {
                 color: Colors.white,
                 border: const Border(top: BorderSide(color: Color(0xFFE2E8F0), width: 2)),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -4))
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -4))
                 ],
               ),
               child: SafeArea(

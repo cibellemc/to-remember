@@ -129,11 +129,11 @@ class AchievementsTab extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isUnlocked ? primaryColor.withOpacity(0.05) : Colors.white,
+        color: isUnlocked ? primaryColor.withValues(alpha: 0.05) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isUnlocked
-              ? primaryColor.withOpacity(0.2)
+              ? primaryColor.withValues(alpha: 0.2)
               : Colors.blueGrey.shade50,
         ),
       ),
@@ -143,7 +143,7 @@ class AchievementsTab extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: isUnlocked
-                  ? primaryColor.withOpacity(0.15)
+                  ? primaryColor.withValues(alpha: 0.15)
                   : Colors.blueGrey.shade50,
               borderRadius: BorderRadius.circular(12),
             ),

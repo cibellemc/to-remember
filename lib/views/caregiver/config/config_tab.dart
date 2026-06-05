@@ -248,7 +248,7 @@ class ConfigTab extends StatelessWidget {
           border: Border.all(color: Colors.grey.shade100),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -260,7 +260,7 @@ class ConfigTab extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: isDestructive
-                    ? Colors.red.withOpacity(0.05)
+                    ? Colors.red.withValues(alpha: 0.05)
                     : const Color(0xFFF0FDF4),
                 borderRadius: BorderRadius.circular(12),
               ),

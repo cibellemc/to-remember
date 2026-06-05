@@ -502,7 +502,7 @@ class _FlipCardState extends State<_FlipCard>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: _primary.withOpacity(0.25),
+            color: _primary.withValues(alpha: 0.25),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -527,7 +527,7 @@ class _FlipCardState extends State<_FlipCard>
               : null,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.07),
+              color: Colors.black.withValues(alpha: 0.07),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),

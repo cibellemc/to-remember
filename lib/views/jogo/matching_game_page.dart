@@ -448,7 +448,7 @@ class _RoundProgress extends StatelessWidget {
           height: 8,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(4),
-            color: done || active ? _primary : _primary.withOpacity(0.2),
+            color: done || active ? _primary : _primary.withValues(alpha: 0.2),
           ),
         );
       }),
@@ -470,7 +470,7 @@ class _TargetCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: _primary.withOpacity(0.15),
+            color: _primary.withValues(alpha: 0.15),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -531,7 +531,7 @@ class _OptionCard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.07),
+              color: Colors.black.withValues(alpha: 0.07),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -553,7 +553,7 @@ class _OptionCard extends StatelessWidget {
               if (overlay != null)
                 Positioned.fill(
                   child: Container(
-                    color: overlay!.withOpacity(0.25),
+                    color: overlay!.withValues(alpha: 0.25),
                     child: Center(
                       child: Icon(
                         overlay == Colors.green
