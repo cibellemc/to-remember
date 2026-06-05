@@ -38,6 +38,7 @@ dependencies:
   supabase_flutter: ^2.10.3
   provider: ^6.1.5+1
   qr_flutter: ^4.1.0
+  flutter_svg: ^2.0.10
 
 dev_dependencies:
   flutter_test:
@@ -71,6 +72,7 @@ flutter:
     - images/role-patient.jpg
     - images/game-memory.jpg
     - images/game-matching.jpg
+    - images/logo.svg
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
