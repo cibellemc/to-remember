@@ -143,10 +143,13 @@ class _RegistrationPageState extends State<RegistrationPage> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
@@ -202,6 +205,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
           ],
         ),
       ),
+    ),
+    ),
     ),
   );
 }
@@ -319,7 +324,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
         const SizedBox(height: 24),
         _buildBigActionCard(
           title: 'ACOMPANHAR\nPACIENTE',
-          icon: Icons.medical_services_outlined,
+          icon: Icons.volunteer_activism, // Ícone sugerindo cuidado, apoio e conexão
           color: const Color(0xFF00695C), // Teal 800 (Alto contraste AAA)
           onTap: () {
             vm.setRole('caregiver');
@@ -404,7 +409,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
         _OptionCard(
           title: 'Familiar / Amigo',
           subtitle: 'Acompanhe o dia a dia de quem você cuida',
-          icon: Icons.people_outline,
+          icon: Icons.people,
           isSelected: vm.caregiverType == 'relative',
           onTap: () {
             vm.setCaregiverType('relative');
@@ -419,7 +424,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
         _OptionCard(
           title: 'Médico / Enfermeiro',
           subtitle: 'Profissional de saúde com registro',
-          icon: Icons.medical_services_outlined,
+          icon: Icons.medical_services,
           isSelected: vm.caregiverType == 'professional',
           onTap: () {
             vm.setCaregiverType('professional');
@@ -760,12 +765,12 @@ class _OptionCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
+                color: isSelected ? primaryColor : Colors.grey.shade200,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
                 icon,
-                color: isSelected ? primaryColor : Colors.black45,
+                color: isSelected ? Colors.white : Colors.black45,
                 size: 40,
               ),
             ),
