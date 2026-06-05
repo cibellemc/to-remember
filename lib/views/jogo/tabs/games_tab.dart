@@ -11,9 +11,12 @@ class GamesTab extends StatelessWidget {
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 700),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           // Header Logo & Title
           Center(
             child: Column(
@@ -57,23 +60,24 @@ class GamesTab extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
-          Text(
-            'Jogos disponiveis',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.blueGrey.shade900,
-            ),
-          ),
-          const SizedBox(height: 16),
+          // Text(
+          //   'Jogos disponiveis',
+          //   style: TextStyle(
+          //     fontSize: 20,
+          //     fontWeight: FontWeight.bold,
+          //     color: Colors.blueGrey.shade900,
+          //   ),
+          // ),
+          // const SizedBox(height: 16),
 
           // Game Cards
           _buildGameCard(
             context,
-            title: 'Jogo da Memoria',
+            title: 'Jogo da Memória',
             description:
-                'Encontre os pares de cartas iguais e treine sua memoria.',
-            imagePath: 'images/game-memory.jpg',
+                'Encontre os pares de cartas iguais e treine sua memória.',
+            icon: Icons.style_rounded,
+            cardColor: Colors.teal,
             onTap: () {
               Navigator.push(
                 context,
@@ -84,9 +88,10 @@ class GamesTab extends StatelessWidget {
           const SizedBox(height: 24),
           _buildGameCard(
             context,
-            title: 'Correspondencia',
-            description: 'Veja uma carta e encontre a mesma entre as opcoes.',
-            imagePath: 'images/game-matching.jpg',
+            title: 'Correspondência',
+            description: 'Veja uma imagem e encontre a mesma entre as opções.',
+            icon: Icons.find_in_page_rounded,
+            cardColor: Colors.indigo,
             onTap: () {
               Navigator.push(
                 context,
@@ -94,8 +99,10 @@ class GamesTab extends StatelessWidget {
               );
             },
           ),
-          const SizedBox(height: 32),
-        ],
+            const SizedBox(height: 32),
+          ],
+        ),
+        ),
       ),
     );
   }
@@ -104,7 +111,8 @@ class GamesTab extends StatelessWidget {
     BuildContext context, {
     required String title,
     required String description,
-    required String imagePath,
+    required IconData icon,
+    required Color cardColor,
     required VoidCallback onTap,
   }) {
     final primaryColor = Theme.of(context).primaryColor;
@@ -130,15 +138,22 @@ class GamesTab extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             child: Column(
               children: [
-                // Image Header
-                AspectRatio(
-                  aspectRatio: 16 / 7,
-                  child: Image.asset(
-                    imagePath,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Colors.blueGrey.shade100,
-                      child: const Icon(Icons.broken_image, color: Colors.blueGrey),
+                // Icon Header
+                Container(
+                  height: 160,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [cardColor.withValues(alpha: 0.8), cardColor],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      icon,
+                      size: 80,
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                   ),
                 ),
