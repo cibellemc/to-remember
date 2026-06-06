@@ -296,25 +296,26 @@ class DashboardTab extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 6,
                           children: [
-                            Expanded(
-                              child: Text(
-                                name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 19,
-                                  color: Color(0xFF1E293B),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
+                            Text(
+                              name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 19,
+                                color: Color(0xFF1E293B),
                               ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                             if (isCreator)
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
-                                  vertical: 2,
+                                  vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFE0F2F1),
@@ -325,6 +326,7 @@ class DashboardTab extends StatelessWidget {
                                   ),
                                 ),
                                 child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.star,
                                         color: Color(0xFF009688), size: 10),
@@ -340,18 +342,18 @@ class DashboardTab extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                            const SizedBox(width: 8),
                             if (!isComplete && !isInactive)
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 10,
-                                  vertical: 5,
+                                  vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFFFF7ED),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
                                       Icons.edit_note_rounded,
