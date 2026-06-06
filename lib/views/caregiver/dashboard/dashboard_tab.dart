@@ -664,94 +664,98 @@ class DashboardTab extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Insira o Código de Vínculo e o Sufixo do Paciente (#xxxx) para continuar.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.blueGrey, fontSize: 13),
-        ),
-        const SizedBox(height: 24),
+        // Opção 1 Header
         Row(
           children: [
-            Expanded(
-              flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Código de Vínculo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: codeController,
-                    maxLength: 6,
-                    textAlign: TextAlign.center,
-                    keyboardType: TextInputType.text,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 4,
-                      color: primaryColor,
-                    ),
-                    textCapitalization: TextCapitalization.characters,
-                    decoration: _dialogInputDecoration(primaryColor, 'ABCDEF').copyWith(
-                      counterText: "",
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    onChanged: (val) async {
-                      if (val.length == 6 && suffixController.text.length == 4) {
-                        final patient = await vm.getPatientFromCode(val, suffixController.text);
-                        if (patient != null) {
-                          onCodeValidated(patient);
-                        } else {
-                          vm.setErrorMessage('Código ou sufixo inválidos.');
-                        }
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Sufixo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: suffixController,
-                    maxLength: 4,
-                    textAlign: TextAlign.center,
-                    keyboardType: TextInputType.number,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                      color: Colors.blueGrey,
-                    ),
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: _dialogInputDecoration(Colors.blueGrey, '1234').copyWith(
-                      counterText: "",
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                      prefixText: '#',
-                      prefixStyle: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    onChanged: (val) async {
-                      if (val.length == 4 && codeController.text.length == 6) {
-                        final patient = await vm.getPatientFromCode(codeController.text, val);
-                        if (patient != null) {
-                          onCodeValidated(patient);
-                        } else {
-                          vm.setErrorMessage('Código ou sufixo inválidos.');
-                        }
-                      }
-                    },
-                  ),
-                ],
-              ),
+            Icon(Icons.phone_android, size: 16, color: primaryColor),
+            const SizedBox(width: 8),
+            Text(
+              'OPÇÃO 1: O PACIENTE TEM CELULAR',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryColor, letterSpacing: 0.5),
             ),
           ],
         ),
+        const SizedBox(height: 8),
+        // Opção 1 Card
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: primaryColor.withOpacity(0.3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Peça ao paciente para abrir o aplicativo e informe os dados abaixo:',
+                style: TextStyle(color: Colors.black87, fontSize: 13, height: 1.4),
+              ),
+              const SizedBox(height: 16),
+              // Código Input
+              const Text('Código de Vínculo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: codeController,
+                maxLength: 6,
+                keyboardType: TextInputType.text,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                  color: primaryColor,
+                ),
+                textCapitalization: TextCapitalization.characters,
+                decoration: _dialogInputDecoration(primaryColor, 'Ex: 123 456').copyWith(
+                  counterText: "",
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                ),
+                onChanged: (val) async {
+                  if (val.length == 6 && suffixController.text.length == 4) {
+                    final patient = await vm.getPatientFromCode(val, suffixController.text);
+                    if (patient != null) {
+                      onCodeValidated(patient);
+                    } else {
+                      vm.setErrorMessage('Código ou sufixo inválidos.');
+                    }
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              // Sufixo Input
+              const Text('Sufixo', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: suffixController,
+                maxLength: 4,
+                keyboardType: TextInputType.number,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2,
+                  color: Colors.blueGrey,
+                ),
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: _dialogInputDecoration(Colors.blueGrey, 'Ex: A1').copyWith(
+                  counterText: "",
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                ),
+                onChanged: (val) async {
+                  if (val.length == 4 && codeController.text.length == 6) {
+                    final patient = await vm.getPatientFromCode(codeController.text, val);
+                    if (patient != null) {
+                      onCodeValidated(patient);
+                    } else {
+                      vm.setErrorMessage('Código ou sufixo inválidos.');
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 24),
+        // Separador OU
         const Row(
           children: [
             Expanded(child: Divider()),
@@ -766,25 +770,50 @@ class DashboardTab extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        OutlinedButton(
-          onPressed: onManualCreate,
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            side: BorderSide(color: primaryColor),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-          child: Text(
-            'CRIAR NOVO PACIENTE',
-            style: TextStyle(
-                color: primaryColor, fontWeight: FontWeight.bold, fontSize: 14),
-          ),
+        // Opção 2 Header
+        Row(
+          children: [
+            Icon(Icons.person_add_alt_1, size: 16, color: primaryColor),
+            const SizedBox(width: 8),
+            Text(
+              'OPÇÃO 2: EU VOU GERENCIAR',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryColor, letterSpacing: 0.5),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Paciente nunca jogou ou não tem celular próprio',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey, fontSize: 12),
+        // Opção 2 Card (Clicável)
+        InkWell(
+          onTap: onManualCreate,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: primaryColor.withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Criar novo perfil',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryColor),
+                    ),
+                    Icon(Icons.chevron_right, color: primaryColor),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Use esta opção se o paciente não possui celular próprio ou prefere que você gerencie tudo por ele.',
+                  style: TextStyle(color: Colors.black87, fontSize: 13, height: 1.4),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );
