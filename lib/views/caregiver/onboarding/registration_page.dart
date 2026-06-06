@@ -5,6 +5,7 @@ import '../../../view_models/login_viewmodel.dart';
 import '../../jogo/jogo_page.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../home/caregiver_home_page.dart';
+import '../../login/login_page.dart';
 
 class RegistrationPage extends StatefulWidget {
   const RegistrationPage({super.key});
@@ -330,7 +331,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
               const Duration(milliseconds: 100),
               () {
                 if (!mounted) return;
-                vm.nextStep();
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
               },
             );
           },
