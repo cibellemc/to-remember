@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../memory_game_page.dart';
 import '../matching_game_page.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import '../occurrences_game_page.dart';
 
 class GamesTab extends StatelessWidget {
   const GamesTab({super.key});
@@ -22,27 +22,6 @@ class GamesTab extends StatelessWidget {
           Center(
             child: Column(
               children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SvgPicture.asset(
-                      'images/logo.svg',
-                      colorFilter: ColorFilter.mode(primaryColor, BlendMode.srcIn),
-                      width: 40,
-                      height: 40,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'To Remember',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
                 Text(
                   'Escolha um jogo para exercitar a mente.',
                   textAlign: TextAlign.center,
@@ -80,17 +59,34 @@ class GamesTab extends StatelessWidget {
               );
             },
           ),
+          // const SizedBox(height: 24),
+          // _buildGameCard(
+          //   context,
+          //   title: 'Correspondência',
+          //   description: 'Veja uma imagem e encontre a mesma entre as opções.',
+          //   icon: Icons.find_in_page_rounded,
+          //   cardColor: Colors.indigo,
+          //   onTap: () {
+          //     Navigator.push(
+          //       context,
+          //       MaterialPageRoute(builder: (_) => const MatchingGamePage()),
+          //     );
+          //   },
+          // ),
           const SizedBox(height: 24),
           _buildGameCard(
             context,
-            title: 'Correspondência',
-            description: 'Veja uma imagem e encontre a mesma entre as opções.',
-            icon: Icons.find_in_page_rounded,
-            cardColor: Colors.indigo,
+            title: 'Encontre as Ocorrências',
+            description:
+                'Memorize a imagem-alvo e encontre todas as suas ocorrências no tabuleiro.',
+            icon: Icons.search_rounded,
+            cardColor: Colors.deepPurple,
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const MatchingGamePage()),
+                MaterialPageRoute(
+                  builder: (_) => const OccurrencesGamePage(),
+                ),
               );
             },
           ),
