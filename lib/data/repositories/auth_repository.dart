@@ -211,6 +211,9 @@ class AuthRepository extends ChangeNotifier {
 
   Future<void> signOut() async {
     _cancelRealtimeListeners();
+    if (currentRole == 'patient') {
+      _hasHadSession = false;
+    }
     await _supabase.auth.signOut();
     _patientProfile = null;
     _connectionCode = null;

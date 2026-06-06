@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../view_models/login_viewmodel.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DESIGN TOKENS
@@ -400,6 +401,7 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
+              context.read<LoginViewModel>().resetToFirstStep();
               await repo.signOut();
             },
             style: ElevatedButton.styleFrom(
