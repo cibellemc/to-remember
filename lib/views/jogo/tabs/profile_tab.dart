@@ -165,7 +165,7 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                           suffix: profile['linking_suffix'] ?? '----',
                           onCopy: () {
                             if (repo.connectionCode != null) {
-                              _copyCode('${repo.connectionCode} #${profile['linking_suffix'] ?? ''}');
+                              _copyCode('Cód. de vínculo: ${repo.connectionCode}\nSufixo: #${profile['linking_suffix'] ?? ''}');
                             }
                           },
                         ),
@@ -242,6 +242,20 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                           onTap: () => _handleSwitchBackToCaregiver(context, repo),
                         ),
                       ],
+                    ),
+                  ),
+                ),
+
+              if (repo.roleOverride == null && repo.realRole != 'professional')
+                SliverToBoxAdapter(
+                  child: _SectionPadding(
+                    top: 24,
+                    child: _buildSettingsAction(
+                      context,
+                      icon: Icons.logout_rounded,
+                      label: 'Sair do aplicativo',
+                      color: Colors.red.shade700,
+                      onTap: () => _handleSignOut(context, repo),
                     ),
                   ),
                 ),
@@ -359,6 +373,45 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
             ],
           );
         },
+      ),
+    );
+  }
+
+  void _handleSignOut(BuildContext context, AuthRepository repo) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(_T.radiusCard)),
+        title: const Text(
+          'Sair do aplicativo?',
+          style: TextStyle(fontWeight: FontWeight.w800, color: _T.textPrimary),
+        ),
+        content: const Text(
+          'Sua conta é anônima. Ao sair, você precisará que um cuidador te reconecte usando o código de vínculo para recuperar seus dados.',
+          style: TextStyle(color: _T.textSecondary, fontSize: 15, height: 1.4),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(foregroundColor: _T.textSecondary),
+            child: const Text('Cancelar', style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await repo.signOut();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Sair', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+        ],
       ),
     );
   }
@@ -700,12 +753,9 @@ class _EmptyConnectionsBanner extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
-          Wrap(
-            spacing: 16,
-            runSpacing: 16,
-            children: [
-              // Connection Code Block
-              Container(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final codeBlock = Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
                   color: _T.background,
@@ -720,15 +770,19 @@ class _EmptyConnectionsBanner extends StatelessWidget {
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _T.textSecondary, letterSpacing: 0.5),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      code,
-                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: _T.primaryDark, letterSpacing: 4),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        code,
+                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _T.primaryDark, letterSpacing: 3),
+                      ),
                     ),
                   ],
                 ),
-              ),
-              // Suffix Block
-              Container(
+              );
+
+              final suffixBlock = Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
                   color: _T.primarySurface,
@@ -743,14 +797,37 @@ class _EmptyConnectionsBanner extends StatelessWidget {
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _T.primaryDark, letterSpacing: 0.5),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      '#$suffix',
-                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: _T.primaryDark),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '#$suffix',
+                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _T.primaryDark),
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ],
+              );
+
+              if (constraints.maxWidth < 300) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    codeBlock,
+                    const SizedBox(height: 16),
+                    suffixBlock,
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(flex: 3, child: codeBlock),
+                  const SizedBox(width: 16),
+                  Expanded(flex: 2, child: suffixBlock),
+                ],
+              );
+            },
           ),
           if (isLargeFont) ...[
             const SizedBox(height: 24),
