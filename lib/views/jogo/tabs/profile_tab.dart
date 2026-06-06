@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../data/repositories/auth_repository.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -134,51 +135,12 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
       body: FadeTransition(
         opacity: _fadeAnim,
         child: SafeArea(
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              SliverToBoxAdapter(
-                child: _SectionPadding(
-                  child: Row(
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Meu Perfil',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: _T.textPrimary,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: _T.primary,
-                          borderRadius: BorderRadius.circular(_T.radiusPill),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.favorite_rounded, color: Colors.white, size: 16),
-                            SizedBox(width: 6),
-                            Text(
-                              'To Remember',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 700),
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
               SliverToBoxAdapter(
                 child: _SectionPadding(
                   top: 16,
@@ -187,8 +149,15 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                       _ProfileHeaderCard(
                         name: profile?['name'] ?? 'Usuário',
                         initials: _initials(profile?['name'] ?? 'U'),
+                        stage: profile?['stage'],
+                        birthDate: repo.formatDateBR(profile?['birth_date']),
                       ),
                       if (profile != null) ...[
+                        const SizedBox(height: 32),
+                        const _SectionHeader(
+                          icon: Icons.qr_code_rounded,
+                          label: 'Acesso e Vínculo',
+                        ),
                         const SizedBox(height: 16),
                         _CompactCodeCard(
                           key: const Key('card_codigo_vinculo'),
@@ -279,6 +248,8 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
 
               const SliverToBoxAdapter(child: SizedBox(height: 40)),
             ],
+          ),
+            ),
           ),
         ),
       ),
@@ -447,8 +418,15 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
 class _ProfileHeaderCard extends StatelessWidget {
   final String name;
   final String initials;
+  final String? stage;
+  final String? birthDate;
 
-  const _ProfileHeaderCard({required this.name, required this.initials});
+  const _ProfileHeaderCard({
+    required this.name,
+    required this.initials,
+    this.stage,
+    this.birthDate,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -513,7 +491,21 @@ class _ProfileHeaderCard extends StatelessWidget {
             height: 1.15,
           ),
         ),
-        const SizedBox(height: 10),
+        if (stage != null && stage!.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Estágio do Alzheimer: $stage',
+            style: const TextStyle(fontSize: 14, color: _T.textSecondary, fontWeight: FontWeight.w500),
+          ),
+        ],
+        if (birthDate != null && birthDate!.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Data de Nasc.: $birthDate',
+            style: const TextStyle(fontSize: 14, color: _T.textSecondary, fontWeight: FontWeight.w500),
+          ),
+        ],
+        const SizedBox(height: 12),
         // FIX #2: Badge de papel com semântica — agrupa ícone + texto em
         // uma única leitura contextual para o TalkBack.
         Semantics(
@@ -656,110 +648,130 @@ class _EmptyConnectionsBanner extends StatelessWidget {
     final textScale = MediaQuery.of(context).textScaler.scale(1.0);
     final isLargeFont = textScale > 1.3;
 
-    final qrIcon = const Icon(Icons.qr_code_rounded, color: _T.primaryDark, size: 28);
-
-    final codeSection = Column(
-      crossAxisAlignment: isLargeFont ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Código de Vínculo',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _T.textSecondary, letterSpacing: 0.5),
-        ),
-        const SizedBox(height: 2),
-        Semantics(
-          label: 'Código de vínculo: ${code.split("").join(" ")}, sufixo: ${suffix.split("").join(" ")}',
-          excludeSemantics: true,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: isLargeFont ? Alignment.center : Alignment.centerLeft,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  code,
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _T.primaryDark, letterSpacing: 4),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _T.primaryDark.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '#$suffix',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _T.primaryDark),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-
-    final copyButton = _IconCopyButton(onTap: onCopy);
-
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: _T.primarySurface,
+        color: _T.surface,
         borderRadius: BorderRadius.circular(_T.radiusCard),
-        border: Border.all(color: _T.primaryLight.withValues(alpha: 0.4), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: _T.primary.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      child: isLargeFont
-          ? Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _T.primarySurface,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.qr_code_rounded, color: _T.primaryDark, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Códigos de Acesso',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: _T.textPrimary,
+                  ),
+                ),
+              ),
+              if (!isLargeFont)
+                TextButton.icon(
+                  onPressed: onCopy,
+                  icon: const Icon(Icons.copy_rounded, size: 18),
+                  label: const Text('Copiar', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: _T.primaryDark,
+                    backgroundColor: _T.primaryDark.withValues(alpha: 0.1),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              // Connection Code Block
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  color: _T.background,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    qrIcon,
-                    const SizedBox(width: 8),
                     const Text(
-                      'Código do Paciente',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: _T.primaryDark),
+                      'Código de Vínculo',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _T.textSecondary, letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      code,
+                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: _T.primaryDark, letterSpacing: 4),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                codeSection,
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: onCopy,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _T.primaryDark,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    icon: const Icon(Icons.copy_rounded, size: 20),
-                    label: const Text(
-                      'Copiar Código',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                  ),
+              ),
+              // Suffix Block
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  color: _T.primarySurface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: _T.primaryLight.withValues(alpha: 0.3)),
                 ),
-              ],
-            )
-          : Row(
-              children: [
-                qrIcon,
-                const SizedBox(width: 14),
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: codeSection,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Sufixo',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _T.primaryDark, letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '#$suffix',
+                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: _T.primaryDark),
+                    ),
+                  ],
                 ),
-                copyButton,
-              ],
+              ),
+            ],
+          ),
+          if (isLargeFont) ...[
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onCopy,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _T.primaryDark,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.copy_rounded, size: 20),
+                label: const Text('Copiar Códigos', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
             ),
+          ],
+        ],
+      ),
     );
   }
 }
