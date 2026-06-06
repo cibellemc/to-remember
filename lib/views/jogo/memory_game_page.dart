@@ -8,11 +8,13 @@ import '../../data/repositories/auth_repository.dart';
 // CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-const _primary     = Color(0xFF009688);
-const _bg          = Color(0xFFF4F7F6);
-const _surface     = Color(0xFFFFFFFF);
-const _textMain    = Color(0xFF1A2E2C);
-const _textSub     = Color(0xFF5A7571);
+const _primary  = Color(0xFF009688);
+const _bg       = Color(0xFFF4F7F6);
+const _surface  = Color(0xFFFFFFFF);
+const _textMain = Color(0xFF1A2E2C);
+const _textSub  = Color(0xFF5A7571);
+
+const _totalRounds = 5;
 
 /// Number of PAIRS per level (index 0 = level 1)
 const _pairCounts = [2, 3, 4, 6, 8];
@@ -22,8 +24,8 @@ const _pairCounts = [2, 3, 4, 6, 8];
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _Card {
-  final String id;        // stimuli id as string (duplicate for pair)
-  final String uniqueKey; // id + '_a' or '_b'
+  final String id;
+  final String uniqueKey;
   final String imageUrl;
   final double selectionScore;
 
@@ -51,7 +53,9 @@ class MemoryGamePage extends StatefulWidget {
 
 class _MemoryGamePageState extends State<MemoryGamePage> {
   bool _loading = true;
-  bool _canPop = false;
+  bool _canPop  = false;
+
+  bool _previewPhase = true;
 
   late int _initialLevel;
   late int _currentLevel;
@@ -59,19 +63,22 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
 
   List<Map<String, dynamic>> _allStimuli = [];
   List<_Card> _cards = [];
-  List<double> _responseTimes = [];
 
-  /// IDs dos pares já usados nesta sessão (evita repetir os mesmos estímulos).
   final Set<dynamic> _usedPairIds = {};
 
-  int? _firstIdx;
-  int? _secondIdx;
-  bool _isChecking = false;
-  int _hits    = 0;
-  int _mistakes = 0;
-  int _pairsFound = 0;
+  // ── Session-level (5 rounds) ──────────────────────────────────────────────
+  int _currentRound  = 0;
+  int _totalHits     = 0;
+  int _totalMistakes = 0;
+  final List<double> _responseTimes  = [];
+  final List<double> _sessionScores  = [];
 
-  DateTime? _lastFlip;
+  // ── Round-level ───────────────────────────────────────────────────────────
+  int?      _firstIdx;
+  int?      _secondIdx;
+  bool      _isChecking   = false;
+  int       _pairsFound   = 0;
+  DateTime? _roundStartTime;
 
   @override
   void initState() {
@@ -89,7 +96,6 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
   Future<void> _init() async {
     final repo = context.read<AuthRepository>();
 
-    // Após hot restart o perfil pode ainda não estar na memória — busca do banco.
     String? patientId = repo.patientProfile?['id']?.toString();
     if (patientId == null) {
       await repo.getPatientProfile();
@@ -100,40 +106,35 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
       return;
     }
 
-    _allStimuli = await repo.fetchStimuli();
-    _progress   = await repo.getPatientGameProgress(patientId, 'memory');
+    _allStimuli   = await repo.fetchStimuli();
+    _progress     = await repo.getPatientGameProgress(patientId, 'memory');
     _initialLevel = _currentLevel = _progress?['current_level'] as int? ?? 1;
 
     _buildBoard();
     if (mounted) setState(() => _loading = false);
   }
 
-  Future<bool> _showExitConfirmationDialog(BuildContext context) async {
-    final result = await showDialog<bool>(
+  Future<void> _handleExit() async {
+    final ok = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('Confirmar Saída'),
         content: const Text(
           'Deseja mesmo sair? O progresso desta partida não será salvo no histórico.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Sair', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
-    return result ?? false;
-  }
-
-  Future<void> _handleExit() async {
-    final shouldExit = await _showExitConfirmationDialog(context);
-    if (shouldExit && mounted) {
+    if ((ok ?? false) && mounted) {
       setState(() => _canPop = true);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) Navigator.of(context).pop();
@@ -141,17 +142,18 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
     }
   }
 
+  // ── Board builder ─────────────────────────────────────────────────────────
+
   void _buildBoard() {
     final pairCount = _pairCounts[(_currentLevel - 1).clamp(0, 4)];
     final pool = FuzzyDifficultyController.filterStimuliForLevel(
-      _allStimuli, _currentLevel,
+      _allStimuli,
+      _currentLevel,
     );
 
     final rng = Random();
 
-    // Filtra pares ainda não usados nesta sessão
     var available = pool.where((s) => !_usedPairIds.contains(s['id'])).toList();
-    // Se restar menos itens que o necessário, reinicia o ciclo
     if (available.length < pairCount) {
       _usedPairIds.clear();
       available = List.from(pool);
@@ -160,7 +162,6 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
     available.shuffle(rng);
     final selected = available.take(pairCount).toList();
 
-    // Registra os pares escolhidos como usados
     for (final s in selected) {
       _usedPairIds.add(s['id']);
     }
@@ -173,30 +174,52 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
         _Card(id: id, uniqueKey: '${id}_a', imageUrl: url, selectionScore: score),
         _Card(id: id, uniqueKey: '${id}_b', imageUrl: url, selectionScore: score),
       ];
-    }).toList()..shuffle(rng);
+    }).toList()
+      ..shuffle(rng);
 
-    _firstIdx    = null;
-    _secondIdx   = null;
-    _isChecking  = false;
-    _hits        = 0;
-    _mistakes    = 0;
-    _pairsFound  = 0;
-    _responseTimes = [];
-    _lastFlip    = DateTime.now();
+    // Preview phase: all cards face-up
+    for (final c in _cards) {
+      c.faceUp = true;
+    }
+    _previewPhase = true;
+
+    // Round-level reset
+    _firstIdx   = null;
+    _secondIdx  = null;
+    _isChecking = false;
+    _pairsFound = 0;
+  }
+
+  // ── Game flow ─────────────────────────────────────────────────────────────
+
+  void _startGame() {
+    setState(() {
+      for (final c in _cards) {
+        c.faceUp = false;
+      }
+      _previewPhase   = false;
+      _roundStartTime = DateTime.now();
+    });
+  }
+
+  void _nextRound() {
+    if (!mounted) return;
+    if (_currentRound + 1 >= _totalRounds) {
+      _finishGame();
+    } else {
+      setState(() {
+        _currentRound++;
+        _buildBoard();
+      });
+    }
   }
 
   // ── Card tap logic ────────────────────────────────────────────────────────
 
   Future<void> _onCardTap(int index) async {
-    if (_isChecking) return;
+    if (_previewPhase || _isChecking) return;
     final card = _cards[index];
     if (card.faceUp || card.matched) return;
-
-    // Record time between flips
-    final now     = DateTime.now();
-    final elapsed = now.difference(_lastFlip!).inMilliseconds;
-    _lastFlip     = now;
-    _responseTimes.add(elapsed.toDouble());
 
     setState(() => card.faceUp = true);
 
@@ -209,29 +232,35 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
     _isChecking = true;
 
     if (_cards[_firstIdx!].id == _cards[_secondIdx!].id) {
-      // Match!
       setState(() {
         _cards[_firstIdx!].matched = true;
         _cards[_secondIdx!].matched = true;
-        _hits++;
+        _totalHits++;
         _pairsFound++;
-        _firstIdx = null;
-        _secondIdx = null;
+        _firstIdx   = null;
+        _secondIdx  = null;
         _isChecking = false;
       });
+
       if (_pairsFound >= _pairCounts[(_currentLevel - 1).clamp(0, 4)]) {
-        await _finishGame();
+        _responseTimes.add(
+          DateTime.now().difference(_roundStartTime!).inMilliseconds.toDouble(),
+        );
+        for (final c in _cards) {
+          if (c.matched) _sessionScores.add(c.selectionScore);
+        }
+        await Future.delayed(const Duration(milliseconds: 600));
+        _nextRound();
       }
     } else {
-      // No match
-      _mistakes++;
+      _totalMistakes++;
       await Future.delayed(const Duration(milliseconds: 900));
       if (!mounted) return;
       setState(() {
         _cards[_firstIdx!].faceUp  = false;
         _cards[_secondIdx!].faceUp = false;
-        _firstIdx  = null;
-        _secondIdx = null;
+        _firstIdx   = null;
+        _secondIdx  = null;
         _isChecking = false;
       });
     }
@@ -244,23 +273,19 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
     final patientId = repo.patientProfile?['id']?.toString();
     if (patientId == null) return;
 
-    final totalAttempts = _hits + _mistakes;
-    final precision     = totalAttempts == 0 ? 1.0 : _hits / totalAttempts;
+    final totalAttempts = _totalHits + _totalMistakes;
+    final precision     = totalAttempts == 0 ? 1.0 : _totalHits / totalAttempts;
     final avgTimeMs     = _responseTimes.isEmpty
         ? 0.0
         : _responseTimes.reduce((a, b) => a + b) / _responseTimes.length;
 
-    final baselineMs    = (_progress?['baseline_response_time'] as num?)?.toDouble();
-    final rawHistory    = _progress?['precision_history'] as List? ?? [];
-    final history       = rawHistory.map((v) => (v as num).toDouble()).toList();
+    final baselineMs = (_progress?['baseline_response_time'] as num?)?.toDouble();
+    final rawHistory = _progress?['precision_history'] as List? ?? [];
+    final history    = rawHistory.map((v) => (v as num).toDouble()).toList();
 
-    final usedStimuli = _cards.where((c) => c.matched).toList();
-    final avgScore    = usedStimuli.isEmpty
+    final avgScore = _sessionScores.isEmpty
         ? 0.72
-        : usedStimuli
-              .map((c) => c.selectionScore)
-              .reduce((a, b) => a + b) /
-          usedStimuli.length;
+        : _sessionScores.reduce((a, b) => a + b) / _sessionScores.length;
 
     final result = FuzzyDifficultyController.evaluate(
       precision: precision,
@@ -272,31 +297,27 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
       gameType: 'memory',
     );
 
-        // Debug — aparece no console do VS Code / Android Studio
+    // ignore: avoid_print
     print('''
-    ─────────── FIS DEBUG ───────────
+    ─────────── FIS DEBUG (memória) ───────────
     Entradas:
       precisão:       ${(precision * 100).toStringAsFixed(1)}%
       latência norm:  ${baselineMs == null ? '1.0 (sem baseline)' : (avgTimeMs / baselineMs).toStringAsFixed(2)}
       carga BOSS:     ${FuzzyDifficultyController.computeBossLoad(avgScore).toStringAsFixed(2)}
       consistência:   ${FuzzyDifficultyController.computeConsistency(history).toStringAsFixed(3)}
       histórico:      $history
-
     Saída:
       score fuzzy:    ${result.score.toStringAsFixed(3)}
       decisão:        ${result.decision}
       nível anterior: $_currentLevel
       nível novo:     ${result.newLevel}
-    ─────────────────────────────────
+    ───────────────────────────────────────────
     ''');
 
-
-    final updatedHistory = [...history, precision].reversed.take(5).toList().reversed.toList();
-    final newBaseline    = FuzzyDifficultyController.updateBaseline(baselineMs, avgTimeMs, precision);
-
-    setState(() {
-      _currentLevel = result.newLevel;
-    });
+    final updatedHistory =
+        [...history, precision].reversed.take(5).toList().reversed.toList();
+    final newBaseline =
+        FuzzyDifficultyController.updateBaseline(baselineMs, avgTimeMs, precision);
 
     await Future.wait([
       repo.upsertPatientGameProgress(
@@ -311,19 +332,27 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
         gameType: 'memory',
         initialLevel: _initialLevel,
         finalLevel: result.newLevel,
-        hits: _hits,
-        mistakes: _mistakes,
+        hits: _totalHits,
+        mistakes: _totalMistakes,
         avgResponseTimeMs: avgTimeMs.round(),
         fuzzyDecision: result.decision,
         performanceData: {
           'pairs_count': _pairCounts[(_currentLevel - 1).clamp(0, 4)],
+          'rounds': _totalRounds,
         },
       ),
     ]);
 
     if (mounted) {
       setState(() {
-        _initialLevel = _currentLevel;
+        _currentLevel  = result.newLevel;
+        _initialLevel  = result.newLevel;
+        _currentRound  = 0;
+        _totalHits     = 0;
+        _totalMistakes = 0;
+        _responseTimes.clear();
+        _sessionScores.clear();
+        _usedPairIds.clear();
         _buildBoard();
       });
     }
@@ -341,56 +370,108 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
     }
     return PopScope(
       canPop: _canPop,
-      onPopInvokedWithResult: (didPop, result) async {
+      onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         await _handleExit();
       },
       child: Scaffold(
         backgroundColor: _bg,
-        body: SafeArea(child: _buildGame()),
+        body: SafeArea(child: _buildContent()),
       ),
     );
   }
 
-  Widget _buildGame() {
+  Widget _buildContent() {
     final pairCount  = _pairCounts[(_currentLevel - 1).clamp(0, 4)];
     final totalCards = pairCount * 2;
-    // 2 colunas para níveis 1-3 (≤8 cartas), 4 colunas para níveis 4-5
-    final cols = totalCards <= 8 ? 2 : 4;
+    final cols       = totalCards <= 8 ? 2 : (totalCards == 12 ? 3 : 4);
+    final rows       = totalCards ~/ cols;
 
     return Column(
       children: [
-        _buildHeader(pairCount),
-        const SizedBox(height: 12),
+        _buildHeader(),
         Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: cols,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.0,
-              ),
-              itemCount: _cards.length,
-              itemBuilder: (context, i) {
-                final card = _cards[i];
-                return _FlipCard(
-                  card: card,
-                  isFaceUp: card.faceUp || card.matched,
-                  onTap: () => _onCardTap(i),
-                );
-              },
-            ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final W = constraints.maxWidth;
+              final H = constraints.maxHeight;
+
+              const padding    = 20.0;
+              const gap        = 12.0;
+              const btnH       = 54.0;
+              const btnPadding = 24.0; // top(8) + bottom(16)
+
+              final availH = _previewPhase ? H - btnH - btnPadding : H - gap;
+              final gridW  = W - 2 * padding;
+              final gridH  = availH - gap;
+
+              final cellW = (gridW - (cols - 1) * gap) / cols;
+              final cellH = (gridH - (rows - 1) * gap) / rows;
+              final cell  = max(1.0, min(cellW, cellH));
+
+              return Column(
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: SizedBox(
+                        width:  cell * cols + gap * (cols - 1),
+                        height: cell * rows + gap * (rows - 1),
+                        child: GridView.builder(
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: cols,
+                            mainAxisSpacing: gap,
+                            crossAxisSpacing: gap,
+                            childAspectRatio: 1.0,
+                          ),
+                          itemCount: _cards.length,
+                          itemBuilder: (_, i) {
+                            final card = _cards[i];
+                            return _FlipCard(
+                              card: card,
+                              isFaceUp: card.faceUp || card.matched,
+                              onTap: () => _onCardTap(i),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_previewPhase)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                      child: SizedBox(
+                        width:  double.infinity,
+                        height: btnH,
+                        child: ElevatedButton(
+                          onPressed: _startGame,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            'Pronto!',
+                            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    const SizedBox(height: 12),
+                ],
+              );
+            },
           ),
         ),
-        const SizedBox(height: 12),
       ],
     );
   }
 
-  Widget _buildHeader(int pairCount) {
+  Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Row(
@@ -405,14 +486,19 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
                 const Text(
                   'Jogo da Memória',
                   style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w800, color: _textMain,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: _textMain,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '$_pairsFound de $pairCount pares encontrados',
-                  style: const TextStyle(fontSize: 13, color: _textSub),
-                ),
+                const SizedBox(height: 6),
+                if (_previewPhase)
+                  const Text(
+                    'Memorize as cartas!',
+                    style: TextStyle(fontSize: 13, color: _textSub),
+                  )
+                else
+                  _RoundProgress(current: _currentRound, total: _totalRounds),
               ],
             ),
           ),
@@ -421,8 +507,38 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
       ),
     );
   }
+}
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ROUND PROGRESS
+// ─────────────────────────────────────────────────────────────────────────────
 
+class _RoundProgress extends StatelessWidget {
+  final int current, total;
+  const _RoundProgress({required this.current, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(total, (i) {
+        final done   = i < current;
+        final active = i == current;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          width:  active ? 20 : 8,
+          height: 8,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(4),
+            color: done || active
+                ? _primary
+                : _primary.withValues(alpha: 0.2),
+          ),
+        );
+      }),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -430,8 +546,8 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _FlipCard extends StatefulWidget {
-  final _Card card;
-  final bool isFaceUp;
+  final _Card        card;
+  final bool         isFaceUp;
   final VoidCallback onTap;
   const _FlipCard({required this.card, required this.isFaceUp, required this.onTap});
 
@@ -439,8 +555,7 @@ class _FlipCard extends StatefulWidget {
   State<_FlipCard> createState() => _FlipCardState();
 }
 
-class _FlipCardState extends State<_FlipCard>
-    with SingleTickerProviderStateMixin {
+class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double>   _anim;
 
@@ -547,5 +662,3 @@ class _FlipCardState extends State<_FlipCard>
     );
   }
 }
-
-
