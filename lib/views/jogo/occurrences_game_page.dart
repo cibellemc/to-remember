@@ -224,9 +224,8 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
 
       if (_roundTargetsFound >= targetCount) {
         _boardLocked = true;
-        _responseTimes.add(
-          DateTime.now().difference(_boardShowTime!).inMilliseconds.toDouble(),
-        );
+        final durationMs = DateTime.now().difference(_boardShowTime!).inMilliseconds.toDouble();
+        _responseTimes.add(durationMs / targetCount);
         Future.delayed(const Duration(milliseconds: 800), _nextRound);
       }
     } else {
@@ -279,7 +278,11 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
         ? 0.0
         : _responseTimes.reduce((a, b) => a + b) / _responseTimes.length;
 
-    final baselineMs = (_progress?['baseline_response_time'] as num?)?.toDouble();
+    final rawBaseline = _progress?['baseline_response_time'] as num?;
+    double? baselineMs = rawBaseline?.toDouble();
+    if (baselineMs != null && baselineMs > 3500.0) {
+      baselineMs = null;
+    }
     final rawHistory = _progress?['precision_history'] as List? ?? [];
     final history    = rawHistory.map((v) => (v as num).toDouble()).toList();
 

@@ -332,9 +332,9 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
       });
 
       if (_pairsFound >= _pairCounts[(_currentLevel - 1).clamp(0, 4)]) {
-        _responseTimes.add(
-          DateTime.now().difference(_roundStartTime!).inMilliseconds.toDouble(),
-        );
+        final durationMs = DateTime.now().difference(_roundStartTime!).inMilliseconds.toDouble();
+        final pairsCount = _pairCounts[(_currentLevel - 1).clamp(0, 4)];
+        _responseTimes.add(durationMs / pairsCount);
         for (final c in _cards) {
           if (c.matched) _sessionScores.add(c.selectionScore);
         }
@@ -368,7 +368,11 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
         ? 0.0
         : _responseTimes.reduce((a, b) => a + b) / _responseTimes.length;
 
-    final baselineMs = (_progress?['baseline_response_time'] as num?)?.toDouble();
+    final rawBaseline = _progress?['baseline_response_time'] as num?;
+    double? baselineMs = rawBaseline?.toDouble();
+    if (baselineMs != null && baselineMs > 3500.0) {
+      baselineMs = null;
+    }
     final rawHistory = _progress?['precision_history'] as List? ?? [];
     final history    = rawHistory.map((v) => (v as num).toDouble()).toList();
 
