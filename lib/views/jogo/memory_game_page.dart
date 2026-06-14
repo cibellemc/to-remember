@@ -377,6 +377,13 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
       ),
     ]);
 
+    _progress = {
+      ...(_progress ?? {}),
+      'current_level': result.newLevel,
+      'baseline_response_time': newBaseline,
+      'precision_history': updatedHistory,
+    };
+
     if (mounted) {
       setState(() {
         _isTransitioning = true;
