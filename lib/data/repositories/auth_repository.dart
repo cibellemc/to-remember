@@ -76,21 +76,21 @@ class AuthRepository extends ChangeNotifier {
 
     if (user != null && role == 'patient') {
       try {
-        // 1. Ensure Profile exists for FK safety
-        await _supabase.from('profiles').upsert({
+        // 1. Ensure Profile exists (run asynchronously to save time)
+        _supabase.from('profiles').upsert({
           'id': user.id,
           'full_name': fullName,
           'role': 'patient',
-        });
+        }).then((_) {}).catchError((e) => debugPrint('Error upserting profile: $e'));
 
-        // 2. Ensure Patient record exists
-        final existing = await _supabase
+        // 2. Ensure Patient record exists (fetch directly)
+        var patientRecord = await _supabase
             .from('patients')
             .select()
             .eq('auth_id', user.id)
             .maybeSingle();
 
-        if (existing == null) {
+        if (patientRecord == null) {
           // Generate a random 4-digit suffix if not found in name
           String? suffix;
           final match = RegExp(r'#(\d{4})').firstMatch(fullName);
@@ -100,13 +100,22 @@ class AuthRepository extends ChangeNotifier {
             suffix = Random().nextInt(10000).toString().padLeft(4, '0');
           }
 
-          await _supabase.from('patients').insert({
+          patientRecord = await _supabase.from('patients').insert({
             'name': fullName,
             'auth_id': user.id,
             'linking_suffix': suffix,
-          });
+          }).select().single();
         }
-        await getPatientProfile();
+        
+        _patientProfile = patientRecord;
+        
+        if (_patientProfile!['linking_suffix'] == null ||
+            _patientProfile!['linking_suffix'].toString().isEmpty) {
+          final newSuffix = Random().nextInt(10000).toString().padLeft(4, '0');
+          _patientProfile!['linking_suffix'] = newSuffix;
+          _supabase.from('patients').update({'linking_suffix': newSuffix}).eq('id', _patientProfile!['id']).then((_) {}).catchError((_) {});
+        }
+
         _setupRealtimeListeners();
       } catch (e) {
         debugPrint('Error ensuring patient/profile record: $e');

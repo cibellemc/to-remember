@@ -395,6 +395,10 @@ class LoginViewModel extends ChangeNotifier {
             role: 'patient',
             fullName: displayName,
           );
+        } else {
+          if (_authRepository.patientProfile == null) {
+            await _authRepository.getPatientProfile();
+          }
         }
       } else {
         final metadata = {
