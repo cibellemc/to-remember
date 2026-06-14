@@ -254,7 +254,7 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
 
   // ── Finish & FIS ─────────────────────────────────────────────────────────
 
-  Future<void> _finishGame() async {
+  Future<void> _finishGame({bool isExiting = false}) async {
     final repo      = context.read<AuthRepository>();
     final patientId = repo.patientProfile?['id']?.toString();
     if (patientId == null) return;
@@ -329,7 +329,7 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
         fuzzyDecision: result.decision,
         performanceData: {
           'total_targets': _totalTargets,
-          'rounds': _totalRounds,
+          'rounds': isExiting ? _currentRound : _totalRounds,
         },
       ),
     ]);
@@ -340,6 +340,8 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
       'baseline_response_time': newBaseline,
       'precision_history': updatedHistory,
     };
+
+    if (isExiting) return;
 
     if (mounted) {
       setState(() {
@@ -397,6 +399,24 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
     }
   }
 
+  Future<void> _handleExitFromTransition() async {
+    // Se o nível foi concluído, os dados já foram salvos. Podemos sair sem aviso.
+    if (_transitionTitle == 'Nível Concluído!') {
+      setState(() => _canPop = true);
+      Navigator.of(context).pop();
+      return;
+    }
+    // Caso contrário, salva os dados parciais da partida e sai do jogo.
+    if (_totalHits > 0 || _totalMistakes > 0) {
+      await _finishGame(isExiting: true);
+    }
+    
+    if (mounted) {
+      setState(() => _canPop = true);
+      Navigator.of(context).pop();
+    }
+  }
+
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -443,29 +463,46 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
                           if (!_isNextRoundReady)
                             const CircularProgressIndicator(color: _primary)
                           else
-                            SizedBox(
-                              width: 240,
-                              height: 56,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  setState(() => _isTransitioning = false);
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _primary,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 240,
+                                  height: 56,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      setState(() => _isTransitioning = false);
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _primary,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    child: Text(
+                                      _transitionButtonText,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
                                   ),
-                                  elevation: 0,
                                 ),
-                                child: Text(
-                                  _transitionButtonText,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
+                                const SizedBox(height: 16),
+                                TextButton(
+                                  onPressed: _handleExitFromTransition,
+                                  child: const Text(
+                                    'Sair do Jogo',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: _textSub,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
                         ],
                       ),
