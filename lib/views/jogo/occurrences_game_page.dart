@@ -225,28 +225,6 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
     }
   }
 
-  void _onConcluir() {
-    if (_boardLocked) return;
-    _boardLocked = true;
-
-    _responseTimes.add(
-      DateTime.now().difference(_boardShowTime!).inMilliseconds.toDouble(),
-    );
-
-    final unfound = _board.where((c) => c.isTarget && !c.found).length;
-    _totalMistakes += unfound;
-
-    if (unfound > 0) {
-      setState(() {
-        for (final cell in _board) {
-          if (cell.isTarget && !cell.found) cell.revealed = true;
-        }
-      });
-      Future.delayed(const Duration(milliseconds: 1200), _nextRound);
-    } else {
-      _nextRound();
-    }
-  }
 
   Future<void> _nextRound() async {
     _miniatureTimer?.cancel();
@@ -664,12 +642,10 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
               final H = constraints.maxHeight;
 
               const padding    = 24.0;
-              const btnH       = 52.0;
-              const btnPadding = 24.0; // top(8) + bottom(16)
               const gap        = 8.0;
 
               final gridW = W - 2 * padding;
-              final gridH = H - btnH - btnPadding - gap;
+              final gridH = H - padding;
 
               final cellW = (gridW - (cols - 1) * gap) / cols;
               final cellH = (gridH - (rows - 1) * gap) / rows;
@@ -719,35 +695,7 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
                       ],
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-                    child: SizedBox(
-                      width:  double.infinity,
-                      height: btnH,
-                      child: ElevatedButton(
-                        onPressed: _boardLocked ? null : _onConcluir,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _primary,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor:
-                              _primary.withValues(alpha: 0.4),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          _roundTargetsFound > 0
-                              ? 'Concluir  ($_roundTargetsFound/$targetCount)'
-                              : 'Concluir',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+
                 ],
               );
             },
