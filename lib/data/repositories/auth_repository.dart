@@ -960,4 +960,52 @@ class AuthRepository extends ChangeNotifier {
       debugPrint('Error saving game session: $e');
     }
   }
+
+  /// Saves a partial game checkpoint to `patient_game_progress`.
+  Future<void> saveGameCheckpoint({
+    required String patientId,
+    required String gameType,
+    required int round,
+    required int hits,
+    required int mistakes,
+    required int targets,
+    required List<dynamic> usedIds,
+    required dynamic times,
+  }) async {
+    try {
+      await _supabase.from('patient_game_progress').upsert({
+        'patient_id': patientId,
+        'game_type': gameType,
+        'checkpoint_round': round,
+        'checkpoint_hits': hits,
+        'checkpoint_mistakes': mistakes,
+        'checkpoint_targets': targets,
+        'checkpoint_used_ids': usedIds,
+        'checkpoint_times': times,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('Error saving game checkpoint: $e');
+    }
+  }
+
+  /// Clears the game checkpoint from `patient_game_progress`.
+  Future<void> clearGameCheckpoint({
+    required String patientId,
+    required String gameType,
+  }) async {
+    try {
+      await _supabase.from('patient_game_progress').update({
+        'checkpoint_round': null,
+        'checkpoint_hits': null,
+        'checkpoint_mistakes': null,
+        'checkpoint_targets': null,
+        'checkpoint_used_ids': null,
+        'checkpoint_times': null,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('patient_id', patientId).eq('game_type', gameType);
+    } catch (e) {
+      debugPrint('Error clearing game checkpoint: $e');
+    }
+  }
 }

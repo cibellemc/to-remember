@@ -121,6 +121,20 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
     _progress   = await repo.getPatientGameProgress(patientId, 'ocorrencias');
     _initialLevel = _currentLevel = _progress?['current_level'] as int? ?? 1;
 
+    final cpRound = _progress?['checkpoint_round'] as int?;
+    if (cpRound != null && cpRound > 0) {
+      _currentRound = cpRound;
+      _totalHits = _progress?['checkpoint_hits'] as int? ?? 0;
+      _totalMistakes = _progress?['checkpoint_mistakes'] as int? ?? 0;
+      _totalTargets = _progress?['checkpoint_targets'] as int? ?? 0;
+
+      final usedIds = _progress?['checkpoint_used_ids'] as List? ?? [];
+      _usedTargetIds.addAll(usedIds);
+
+      final rawTimes = _progress?['checkpoint_times'] as List? ?? [];
+      _responseTimes.addAll(rawTimes.map((t) => (t as num).toDouble()));
+    }
+
     _buildRound();
     await _precacheStimuli();
     if (mounted) setState(() => _isInitialLoading = false);
@@ -254,7 +268,7 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
 
   // ── Finish & FIS ─────────────────────────────────────────────────────────
 
-  Future<void> _finishGame({bool isExiting = false}) async {
+  Future<void> _finishGame() async {
     final repo      = context.read<AuthRepository>();
     final patientId = repo.patientProfile?['id']?.toString();
     if (patientId == null) return;
@@ -329,8 +343,12 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
         fuzzyDecision: result.decision,
         performanceData: {
           'total_targets': _totalTargets,
-          'rounds': isExiting ? _currentRound : _totalRounds,
+          'rounds': _totalRounds,
         },
+      ),
+      repo.clearGameCheckpoint(
+        patientId: patientId,
+        gameType: 'ocorrencias',
       ),
     ]);
 
@@ -339,9 +357,13 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
       'current_level': result.newLevel,
       'baseline_response_time': newBaseline,
       'precision_history': updatedHistory,
+      'checkpoint_round': null,
+      'checkpoint_hits': null,
+      'checkpoint_mistakes': null,
+      'checkpoint_targets': null,
+      'checkpoint_used_ids': null,
+      'checkpoint_times': null,
     };
-
-    if (isExiting) return;
 
     if (mounted) {
       setState(() {
@@ -392,6 +414,11 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
       ),
     );
     if ((ok ?? false) && mounted) {
+      final repo = context.read<AuthRepository>();
+      final patientId = repo.patientProfile?['id']?.toString();
+      if (patientId != null) {
+        await repo.clearGameCheckpoint(patientId: patientId, gameType: 'ocorrencias');
+      }
       setState(() => _canPop = true);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) Navigator.of(context).pop();
@@ -406,9 +433,20 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
       Navigator.of(context).pop();
       return;
     }
-    // Caso contrário, salva os dados parciais da partida e sai do jogo.
-    if (_totalHits > 0 || _totalMistakes > 0) {
-      await _finishGame(isExiting: true);
+    // Caso contrário, salva o checkpoint parcial no banco e sai.
+    final repo      = context.read<AuthRepository>();
+    final patientId = repo.patientProfile?['id']?.toString();
+    if (patientId != null && (_totalHits > 0 || _totalMistakes > 0)) {
+      await repo.saveGameCheckpoint(
+        patientId: patientId,
+        gameType: 'ocorrencias',
+        round: _currentRound,
+        hits: _totalHits,
+        mistakes: _totalMistakes,
+        targets: _totalTargets,
+        usedIds: _usedTargetIds.toList(),
+        times: _responseTimes,
+      );
     }
     
     if (mounted) {

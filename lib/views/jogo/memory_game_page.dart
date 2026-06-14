@@ -114,6 +114,24 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
     _progress     = await repo.getPatientGameProgress(patientId, 'memory');
     _initialLevel = _currentLevel = _progress?['current_level'] as int? ?? 1;
 
+    final cpRound = _progress?['checkpoint_round'] as int?;
+    if (cpRound != null && cpRound > 0) {
+      _currentRound = cpRound;
+      _totalHits = _progress?['checkpoint_hits'] as int? ?? 0;
+      _totalMistakes = _progress?['checkpoint_mistakes'] as int? ?? 0;
+
+      final usedIds = _progress?['checkpoint_used_ids'] as List? ?? [];
+      _usedPairIds.addAll(usedIds);
+
+      final cpTimes = _progress?['checkpoint_times'];
+      if (cpTimes is Map) {
+        final rawTimes = cpTimes['response_times'] as List? ?? [];
+        _responseTimes.addAll(rawTimes.map((t) => (t as num).toDouble()));
+        final rawScores = cpTimes['session_scores'] as List? ?? [];
+        _sessionScores.addAll(rawScores.map((s) => (s as num).toDouble()));
+      }
+    }
+
     final newCards = _generateBoard();
     await _precacheCards(newCards);
     if (!mounted) return;
@@ -150,6 +168,11 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
       ),
     );
     if ((ok ?? false) && mounted) {
+      final repo = context.read<AuthRepository>();
+      final patientId = repo.patientProfile?['id']?.toString();
+      if (patientId != null) {
+        await repo.clearGameCheckpoint(patientId: patientId, gameType: 'memory');
+      }
       setState(() => _canPop = true);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) Navigator.of(context).pop();
@@ -164,9 +187,23 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
       Navigator.of(context).pop();
       return;
     }
-    // Caso contrário, salva os dados parciais da partida e sai do jogo.
-    if (_totalHits > 0 || _totalMistakes > 0) {
-      await _finishGame(isExiting: true);
+    // Caso contrário, salva o checkpoint parcial no banco e sai.
+    final repo      = context.read<AuthRepository>();
+    final patientId = repo.patientProfile?['id']?.toString();
+    if (patientId != null && (_totalHits > 0 || _totalMistakes > 0)) {
+      await repo.saveGameCheckpoint(
+        patientId: patientId,
+        gameType: 'memory',
+        round: _currentRound,
+        hits: _totalHits,
+        mistakes: _totalMistakes,
+        targets: 0,
+        usedIds: _usedPairIds.toList(),
+        times: {
+          'response_times': _responseTimes,
+          'session_scores': _sessionScores,
+        },
+      );
     }
     
     if (mounted) {
@@ -320,7 +357,7 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
 
   // ── Finish & FIS ─────────────────────────────────────────────────────────
 
-  Future<void> _finishGame({bool isExiting = false}) async {
+  Future<void> _finishGame() async {
     final repo      = context.read<AuthRepository>();
     final patientId = repo.patientProfile?['id']?.toString();
     if (patientId == null) return;
@@ -390,8 +427,12 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
         fuzzyDecision: result.decision,
         performanceData: {
           'pairs_count': _pairCounts[(_currentLevel - 1).clamp(0, 4)],
-          'rounds': isExiting ? _currentRound : _totalRounds,
+          'rounds': _totalRounds,
         },
+      ),
+      repo.clearGameCheckpoint(
+        patientId: patientId,
+        gameType: 'memory',
       ),
     ]);
 
@@ -400,9 +441,13 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
       'current_level': result.newLevel,
       'baseline_response_time': newBaseline,
       'precision_history': updatedHistory,
+      'checkpoint_round': null,
+      'checkpoint_hits': null,
+      'checkpoint_mistakes': null,
+      'checkpoint_targets': null,
+      'checkpoint_used_ids': null,
+      'checkpoint_times': null,
     };
-
-    if (isExiting) return;
 
     if (mounted) {
       setState(() {
