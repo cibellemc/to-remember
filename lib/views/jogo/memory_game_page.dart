@@ -52,7 +52,11 @@ class MemoryGamePage extends StatefulWidget {
 }
 
 class _MemoryGamePageState extends State<MemoryGamePage> {
-  bool _loading = true;
+  bool _isInitialLoading = true;
+  bool _isTransitioning = false;
+  bool _isNextRoundReady = false;
+  String _transitionTitle = 'Mandou bem!';
+  String _transitionButtonText = 'Próxima Etapa';
   bool _canPop  = false;
 
   bool _previewPhase = true;
@@ -110,8 +114,19 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
     _progress     = await repo.getPatientGameProgress(patientId, 'memory');
     _initialLevel = _currentLevel = _progress?['current_level'] as int? ?? 1;
 
-    _buildBoard();
-    if (mounted) setState(() => _loading = false);
+    final newCards = _generateBoard();
+    await _precacheCards(newCards);
+    if (!mounted) return;
+
+    setState(() {
+      _cards = newCards;
+      _previewPhase = true;
+      _firstIdx = null;
+      _secondIdx = null;
+      _isChecking = false;
+      _pairsFound = 0;
+      _isInitialLoading = false;
+    });
   }
 
   Future<void> _handleExit() async {
@@ -144,7 +159,7 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
 
   // ── Board builder ─────────────────────────────────────────────────────────
 
-  void _buildBoard() {
+  List<_Card> _generateBoard() {
     final pairCount = _pairCounts[(_currentLevel - 1).clamp(0, 4)];
     final pool = FuzzyDifficultyController.filterStimuliForLevel(
       _allStimuli,
@@ -166,7 +181,7 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
       _usedPairIds.add(s['id']);
     }
 
-    _cards = selected.expand((s) {
+    final cards = selected.expand((s) {
       final id    = s['id'].toString();
       final url   = s['url_imagem'] as String;
       final score = (s['selection_score'] as num).toDouble();
@@ -177,17 +192,18 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
     }).toList()
       ..shuffle(rng);
 
-    // Preview phase: all cards face-up
-    for (final c in _cards) {
+    for (final c in cards) {
       c.faceUp = true;
     }
-    _previewPhase = true;
+    return cards;
+  }
 
-    // Round-level reset
-    _firstIdx   = null;
-    _secondIdx  = null;
-    _isChecking = false;
-    _pairsFound = 0;
+  Future<void> _precacheCards(List<_Card> cards) async {
+    if (!mounted) return;
+    final urls = cards.map((c) => c.imageUrl).toSet();
+    await Future.wait(
+      urls.map((url) => precacheImage(NetworkImage(url), context)),
+    );
   }
 
   // ── Game flow ─────────────────────────────────────────────────────────────
@@ -202,15 +218,33 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
     });
   }
 
-  void _nextRound() {
+  Future<void> _nextRound() async {
     if (!mounted) return;
     if (_currentRound + 1 >= _totalRounds) {
       _finishGame();
     } else {
       setState(() {
-        _currentRound++;
-        _buildBoard();
+        _isTransitioning = true;
+        _isNextRoundReady = false;
+        _transitionTitle = 'Mandou bem!';
+        _transitionButtonText = 'Próxima Rodada';
       });
+      
+      final nextCards = _generateBoard();
+      await _precacheCards(nextCards);
+      
+      if (mounted) {
+        setState(() {
+          _currentRound++;
+          _cards = nextCards;
+          _previewPhase = true;
+          _firstIdx = null;
+          _secondIdx = null;
+          _isChecking = false;
+          _pairsFound = 0;
+          _isNextRoundReady = true;
+        });
+      }
     }
   }
 
@@ -345,16 +379,35 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
 
     if (mounted) {
       setState(() {
-        _currentLevel  = result.newLevel;
-        _initialLevel  = result.newLevel;
-        _currentRound  = 0;
-        _totalHits     = 0;
-        _totalMistakes = 0;
-        _responseTimes.clear();
-        _sessionScores.clear();
-        _usedPairIds.clear();
-        _buildBoard();
+        _isTransitioning = true;
+        _isNextRoundReady = false;
+        _transitionTitle = 'Nível Concluído!';
+        _transitionButtonText = 'Próximo Nível';
       });
+      
+      _currentLevel  = result.newLevel;
+      _initialLevel  = result.newLevel;
+      _usedPairIds.clear();
+      
+      final nextCards = _generateBoard();
+      await _precacheCards(nextCards);
+
+      if (mounted) {
+        setState(() {
+          _currentRound  = 0;
+          _totalHits     = 0;
+          _totalMistakes = 0;
+          _responseTimes.clear();
+          _sessionScores.clear();
+          _cards = nextCards;
+          _previewPhase = true;
+          _firstIdx = null;
+          _secondIdx = null;
+          _isChecking = false;
+          _pairsFound = 0;
+          _isNextRoundReady = true;
+        });
+      }
     }
   }
 
@@ -362,7 +415,7 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
+    if (_isInitialLoading) {
       return const Scaffold(
         backgroundColor: _bg,
         body: Center(child: CircularProgressIndicator(color: _primary)),
@@ -376,7 +429,65 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
       },
       child: Scaffold(
         backgroundColor: _bg,
-        body: SafeArea(child: _buildContent()),
+        body: SafeArea(
+          child: Stack(
+            children: [
+              _buildContent(),
+              if (_isTransitioning)
+                Positioned.fill(
+                  child: Container(
+                    color: _bg,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star_rounded, color: Colors.amber, size: 80),
+                          const SizedBox(height: 24),
+                          Text(
+                            _transitionTitle,
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: _textMain,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 48),
+                          if (!_isNextRoundReady)
+                            const CircularProgressIndicator(color: _primary)
+                          else
+                            SizedBox(
+                              width: 240,
+                              height: 56,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  setState(() => _isTransitioning = false);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: Text(
+                                  _transitionButtonText,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

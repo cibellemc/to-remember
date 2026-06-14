@@ -55,7 +55,11 @@ class OccurrencesGamePage extends StatefulWidget {
 }
 
 class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
-  bool _loading = true;
+  bool _isInitialLoading = true;
+  bool _isTransitioning = false;
+  bool _isNextRoundReady = false;
+  String _transitionTitle = 'Mandou bem!';
+  String _transitionButtonText = 'Próxima Etapa';
   bool _canPop  = false;
 
   _Phase _phase = _Phase.memorize;
@@ -118,7 +122,16 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
     _initialLevel = _currentLevel = _progress?['current_level'] as int? ?? 1;
 
     _buildRound();
-    if (mounted) setState(() => _loading = false);
+    await _precacheStimuli();
+    if (mounted) setState(() => _isInitialLoading = false);
+  }
+
+  Future<void> _precacheStimuli() async {
+    if (!mounted) return;
+    final urls = _board.map((c) => c.stimulus['url_imagem'] as String).toSet();
+    await Future.wait(
+      urls.map((url) => precacheImage(NetworkImage(url), context)),
+    );
   }
 
   // ── Round logic ───────────────────────────────────────────────────────────
@@ -235,7 +248,7 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
     }
   }
 
-  void _nextRound() {
+  Future<void> _nextRound() async {
     _miniatureTimer?.cancel();
     if (!mounted) return;
 
@@ -243,9 +256,21 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
       _finishGame();
     } else {
       setState(() {
-        _currentRound++;
-        _buildRound();
+        _isTransitioning = true;
+        _isNextRoundReady = false;
+        _transitionTitle = 'Mandou bem!';
+        _transitionButtonText = 'Próxima Rodada';
       });
+      // Damos um pequeno fôlego para a tela de overlay aparecer antes do buildRound
+      await Future.delayed(const Duration(milliseconds: 50));
+      
+      _currentRound++;
+      _buildRound();
+      await _precacheStimuli();
+      
+      if (mounted) {
+        setState(() => _isNextRoundReady = true);
+      }
     }
   }
 
@@ -333,16 +358,27 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
 
     if (mounted) {
       setState(() {
-        _currentRound  = 0;
-        _totalHits     = 0;
-        _totalMistakes = 0;
-        _totalTargets  = 0;
-        _responseTimes.clear();
-        _sessionStimuli.clear();
-        _initialLevel = _currentLevel;
-        _usedTargetIds.clear();
-        _buildRound();
+        _isTransitioning = true;
+        _isNextRoundReady = false;
+        _transitionTitle = 'Nível Concluído!';
+        _transitionButtonText = 'Próximo Nível';
       });
+      await Future.delayed(const Duration(milliseconds: 50));
+      
+      _currentRound  = 0;
+      _totalHits     = 0;
+      _totalMistakes = 0;
+      _totalTargets  = 0;
+      _responseTimes.clear();
+      _sessionStimuli.clear();
+      _initialLevel = _currentLevel;
+      _usedTargetIds.clear();
+      _buildRound();
+      await _precacheStimuli();
+
+      if (mounted) {
+        setState(() => _isNextRoundReady = true);
+      }
     }
   }
 
@@ -380,7 +416,7 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
+    if (_isInitialLoading) {
       return const Scaffold(
         backgroundColor: _bg,
         body: Center(child: CircularProgressIndicator(color: _primary)),
@@ -396,7 +432,63 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
       child: Scaffold(
         backgroundColor: _bg,
         body: SafeArea(
-          child: _phase == _Phase.memorize ? _buildMemorize() : _buildBoard(),
+          child: Stack(
+            children: [
+              _phase == _Phase.memorize ? _buildMemorize() : _buildBoard(),
+              if (_isTransitioning)
+                Positioned.fill(
+                  child: Container(
+                    color: _bg,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star_rounded, color: Colors.amber, size: 80),
+                          const SizedBox(height: 24),
+                          Text(
+                            _transitionTitle,
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: _textMain,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 48),
+                          if (!_isNextRoundReady)
+                            const CircularProgressIndicator(color: _primary)
+                          else
+                            SizedBox(
+                              width: 240,
+                              height: 56,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  setState(() => _isTransitioning = false);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: Text(
+                                  _transitionButtonText,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
