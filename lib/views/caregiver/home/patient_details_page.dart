@@ -13,8 +13,6 @@ class PatientDetailsPage extends StatefulWidget {
 }
 
 class _PatientDetailsPageState extends State<PatientDetailsPage> {
-  int _activeTab = 0;
-  String _selectedGameType = 'memoria';
 
   @override
   void initState() {
@@ -334,17 +332,74 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                 ),
               ),
 
-              _buildTabSelector(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Ações',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildActionButton(
+                      icon: Icons.bar_chart_rounded,
+                      label: 'Ver Desempenho',
+                      subtitle: 'Histórico de jogos, métricas e gráficos de evolução',
+                      color: Colors.indigo.shade700,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PatientPerformancePage(
+                              patient: patient,
+                              viewModel: vm,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildActionButton(
+                      icon: Icons.edit_note_rounded,
+                      label: 'Editar Paciente',
+                      subtitle: 'Alterar nome, data de nascimento ou estágio',
+                      color: const Color(0xFF009688),
+                      onTap: () => _showEditDialog(context, patient, vm),
+                    ),
+                    _buildActionButton(
+                      icon: Icons.visibility_rounded,
+                      label: 'Visão do Paciente',
+                      subtitle: 'Ver interface e jogar como este paciente',
+                      color: Colors.blue.shade700,
+                      onTap: () {
+                        vm.authRepository.setRoleOverride('patient', patientId: patient['id'].toString());
+                      },
+                    ),
+                    _buildActionButton(
+                      icon: patient['status'] == 'inactive' ? Icons.restore_rounded : Icons.link_off_rounded,
+                      label: patient['status'] == 'inactive' ? 'Reativar Paciente' : 'Desconectar Paciente',
+                      subtitle: patient['status'] == 'inactive'
+                          ? 'Restabelecer o vínculo com este paciente'
+                          : 'Remover o vínculo com este paciente',
+                      color: patient['status'] == 'inactive' ? const Color(0xFF009688) : Colors.red.shade700,
+                      onTap: () {
+                        if (patient['status'] == 'inactive') {
+                          _showReactivationDialog(context, vm, patient);
+                        } else {
+                          _showDisconnectConfirm(context, patient, vm);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 32),
 
-              if (_activeTab == 0)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
+                    if (vm.authRepository.currentRole != 'professional') ...[
                       const Text(
-                        'Ações',
+                        'Equipe de Cuidado',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -352,70 +407,16 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _buildActionButton(
-                        icon: Icons.bar_chart_rounded,
-                        label: 'Ver Desempenho',
-                        subtitle: 'Histórico de jogos, métricas e gráficos de evolução',
-                        color: Colors.indigo.shade700,
-                        onTap: () {
-                          setState(() => _activeTab = 1);
-                        },
-                      ),
-                      _buildActionButton(
-                        icon: Icons.edit_note_rounded,
-                        label: 'Editar Paciente',
-                        subtitle: 'Alterar nome, data de nascimento ou estágio',
-                        color: const Color(0xFF009688),
-                        onTap: () => _showEditDialog(context, patient, vm),
-                      ),
-                      _buildActionButton(
-                        icon: Icons.visibility_rounded,
-                        label: 'Visão do Paciente',
-                        subtitle: 'Ver interface e jogar como este paciente',
-                        color: Colors.blue.shade700,
-                        onTap: () {
-                          vm.authRepository.setRoleOverride('patient', patientId: patient['id'].toString());
-                        },
-                      ),
-                      _buildActionButton(
-                        icon: patient['status'] == 'inactive' ? Icons.restore_rounded : Icons.link_off_rounded,
-                        label: patient['status'] == 'inactive' ? 'Reativar Paciente' : 'Desconectar Paciente',
-                        subtitle: patient['status'] == 'inactive'
-                            ? 'Restabelecer o vínculo com este paciente'
-                            : 'Remover o vínculo com este paciente',
-                        color: patient['status'] == 'inactive' ? const Color(0xFF009688) : Colors.red.shade700,
-                        onTap: () {
-                          if (patient['status'] == 'inactive') {
-                            _showReactivationDialog(context, vm, patient);
-                          } else {
-                            _showDisconnectConfirm(context, patient, vm);
-                          }
-                        },
-                      ),
+                      if (vm.patientCaregivers.isEmpty)
+                        const Text('Carregando cuidadores...')
+                      else
+                        ...vm.patientCaregivers.map((cg) => _buildCaregiverTile(cg)),
                       const SizedBox(height: 32),
-
-                      if (vm.authRepository.currentRole != 'professional') ...[
-                        const Text(
-                          'Equipe de Cuidado',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1E293B),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        if (vm.patientCaregivers.isEmpty)
-                          const Text('Carregando cuidadores...')
-                        else
-                          ...vm.patientCaregivers.map((cg) => _buildCaregiverTile(cg)),
-                        const SizedBox(height: 32),
-                      ],
-                      const SizedBox(height: 40),
                     ],
-                  ),
-                )
-              else
-                _buildDesempenhoTab(vm),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -578,75 +579,159 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
   }
 
 
-  Widget _buildTabSelector() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _activeTab = 0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: _activeTab == 0 ? Colors.white : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: _activeTab == 0
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          )
-                        ]
-                      : null,
-                ),
-                child: Text(
-                  'Perfil & Equipe',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: _activeTab == 0 ? const Color(0xFF009688) : Colors.grey.shade600,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _activeTab = 1),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: _activeTab == 1 ? Colors.white : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: _activeTab == 1
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          )
-                        ]
-                      : null,
-                ),
-                child: Text(
-                  'Desempenho & Jogos',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: _activeTab == 1 ? const Color(0xFF009688) : Colors.grey.shade600,
-                  ),
-                ),
-              ),
-            ),
+  
+
+  void _showCannotDisconnectDialog(BuildContext context, String patientName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Não é possível sair'),
+        content: Text(
+          'Você é o único cuidador ativo para $patientName. Para se desconectar, você deve primeiro vincular outro cuidador.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Entendido'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showReactivationDialog(
+    BuildContext context,
+    CaregiverViewModel vm,
+    Map<String, dynamic> patient,
+  ) {
+    final codeController = TextEditingController();
+    vm.clearError();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return ChangeNotifierProvider.value(
+          value: vm,
+          child: Consumer<CaregiverViewModel>(
+            builder: (context, vm, child) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                title: Text('Reativar ${patient['name']}'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (vm.errorMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)),
+                          child: Text(vm.errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                        ),
+                      ),
+                    const Text('Insira o código de vínculo para reativar o monitoramento.'),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: codeController,
+                      maxLength: 6,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 4),
+                      decoration: const InputDecoration(border: OutlineInputBorder(), counterText: ""),
+                      textCapitalization: TextCapitalization.characters,
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+                  ElevatedButton(
+                    onPressed: vm.isLoading
+                        ? null
+                        : () async {
+                            await vm.reactivatePatient(
+                              patientId: patient['id'].toString(),
+                              code: codeController.text.trim().toUpperCase(),
+                            );
+                            if (vm.errorMessage == null && context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Reativado com sucesso!'), backgroundColor: Colors.green),
+                              );
+                            }
+                          },
+                    child: vm.isLoading ? const CircularProgressIndicator() : const Text('REATIVAR'),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+class DateInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.length < oldValue.text.length) return newValue;
+    final text = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (text.length > 8) return oldValue;
+    final buffer = StringBuffer();
+    for (int i = 0; i < text.length; i++) {
+      buffer.write(text[i]);
+      if ((i == 1 || i == 3) && i != text.length - 1) buffer.write('/');
+    }
+    final formatted = buffer.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+class PatientPerformancePage extends StatefulWidget {
+  final Map<String, dynamic> patient;
+  final CaregiverViewModel viewModel;
+
+  const PatientPerformancePage({
+    super.key,
+    required this.patient,
+    required this.viewModel,
+  });
+
+  @override
+  State<PatientPerformancePage> createState() => _PatientPerformancePageState();
+}
+
+class _PatientPerformancePageState extends State<PatientPerformancePage> {
+  String _selectedGameType = 'memoria';
+
+  @override
+  Widget build(BuildContext context) {
+    final patient = widget.patient;
+    final vm = widget.viewModel;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: Text('Desempenho de ${patient['name'] ?? 'Paciente'}'),
+        backgroundColor: const Color(0xFF009688),
+        elevation: 0,
+        foregroundColor: Colors.white,
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final patientId = patient['id'].toString();
+          await vm.fetchPatientGameData(patientId);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(top: 24),
+          child: _buildDesempenhoTab(vm),
+        ),
       ),
     );
   }
@@ -998,14 +1083,14 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
     try {
       final dt = DateTime.parse(dateStr).toLocal();
       final now = DateTime.now();
-      
+
       final isToday = dt.year == now.year && dt.month == now.month && dt.day == now.day;
       final isYesterday = dt.year == now.year && dt.month == now.month && dt.day == now.day - 1;
-      
+
       final hourStr = dt.hour.toString().padLeft(2, '0');
       final minStr = dt.minute.toString().padLeft(2, '0');
       final timeStr = "$hourStr:$minStr";
-      
+
       if (isToday) {
         return "Hoje, $timeStr";
       } else if (isYesterday) {
@@ -1047,7 +1132,6 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
       gameIcon = Icons.extension;
     }
 
-    // Color and icons for fuzzy decision
     Color decisionColor = Colors.grey;
     IconData decisionIcon = Icons.trending_flat;
     if (decision == 'Aumentar') {
@@ -1096,7 +1180,6 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                   ],
                 ),
               ),
-              // Decision badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -1151,116 +1234,6 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
         ),
       ],
-    );
-  }
-
-  void _showCannotDisconnectDialog(BuildContext context, String patientName) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Não é possível sair'),
-        content: Text(
-          'Você é o único cuidador ativo para $patientName. Para se desconectar, você deve primeiro vincular outro cuidador.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Entendido'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showReactivationDialog(
-    BuildContext context,
-    CaregiverViewModel vm,
-    Map<String, dynamic> patient,
-  ) {
-    final codeController = TextEditingController();
-    vm.clearError();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return ChangeNotifierProvider.value(
-          value: vm,
-          child: Consumer<CaregiverViewModel>(
-            builder: (context, vm, child) {
-              return AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                title: Text('Reativar ${patient['name']}'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (vm.errorMessage != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)),
-                          child: Text(vm.errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 13)),
-                        ),
-                      ),
-                    const Text('Insira o código de vínculo para reativar o monitoramento.'),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: codeController,
-                      maxLength: 6,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 4),
-                      decoration: const InputDecoration(border: OutlineInputBorder(), counterText: ""),
-                      textCapitalization: TextCapitalization.characters,
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-                  ElevatedButton(
-                    onPressed: vm.isLoading
-                        ? null
-                        : () async {
-                            await vm.reactivatePatient(
-                              patientId: patient['id'].toString(),
-                              code: codeController.text.trim().toUpperCase(),
-                            );
-                            if (vm.errorMessage == null && context.mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Reativado com sucesso!'), backgroundColor: Colors.green),
-                              );
-                            }
-                          },
-                    child: vm.isLoading ? const CircularProgressIndicator() : const Text('REATIVAR'),
-                  ),
-                ],
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-}
-
-class DateInputFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    if (newValue.text.length < oldValue.text.length) return newValue;
-    final text = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (text.length > 8) return oldValue;
-    final buffer = StringBuffer();
-    for (int i = 0; i < text.length; i++) {
-      buffer.write(text[i]);
-      if ((i == 1 || i == 3) && i != text.length - 1) buffer.write('/');
-    }
-    final formatted = buffer.toString();
-    return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }
