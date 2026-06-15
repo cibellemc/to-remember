@@ -150,8 +150,6 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                       _ProfileHeaderCard(
                         name: profile?['name'] ?? 'Usuário',
                         initials: _initials(profile?['name'] ?? 'U'),
-                        stage: profile?['stage'],
-                        birthDate: repo.formatDateBR(profile?['birth_date']),
                       ),
                       if (profile != null) ...[
                         const SizedBox(height: 32),
@@ -473,14 +471,10 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
 class _ProfileHeaderCard extends StatelessWidget {
   final String name;
   final String initials;
-  final String? stage;
-  final String? birthDate;
 
   const _ProfileHeaderCard({
     required this.name,
     required this.initials,
-    this.stage,
-    this.birthDate,
   });
 
   @override
@@ -546,20 +540,6 @@ class _ProfileHeaderCard extends StatelessWidget {
             height: 1.15,
           ),
         ),
-        if (stage != null && stage!.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          Text(
-            'Estágio do Alzheimer: $stage',
-            style: const TextStyle(fontSize: 14, color: _T.textSecondary, fontWeight: FontWeight.w500),
-          ),
-        ],
-        if (birthDate != null && birthDate!.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            'Data de Nasc.: $birthDate',
-            style: const TextStyle(fontSize: 14, color: _T.textSecondary, fontWeight: FontWeight.w500),
-          ),
-        ],
         const SizedBox(height: 12),
         // FIX #2: Badge de papel com semântica — agrupa ícone + texto em
         // uma única leitura contextual para o TalkBack.
