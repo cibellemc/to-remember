@@ -83,38 +83,18 @@ class AuthRepository extends ChangeNotifier {
           'role': 'patient',
         }).then((_) {}).catchError((e) => debugPrint('Error upserting profile: $e'));
 
-        // 2. Ensure Patient record exists (fetch directly)
-        var patientRecord = await _supabase
-            .from('patients')
-            .select()
-            .eq('auth_id', user.id)
-            .maybeSingle();
+        // 2. Create the Patient record directly: this is a brand-new anonymous
+        // user (signInAnonymously is only called when there was no session yet),
+        // so there can't be an existing 'patients' row for this auth_id and a
+        // select-before-insert round trip would be wasted latency.
+        final match = RegExp(r'#(\d{4})').firstMatch(fullName);
+        final suffix = match?.group(1) ?? Random().nextInt(10000).toString().padLeft(4, '0');
 
-        if (patientRecord == null) {
-          // Generate a random 4-digit suffix if not found in name
-          String? suffix;
-          final match = RegExp(r'#(\d{4})').firstMatch(fullName);
-          if (match != null) {
-            suffix = match.group(1);
-          } else {
-            suffix = Random().nextInt(10000).toString().padLeft(4, '0');
-          }
-
-          patientRecord = await _supabase.from('patients').insert({
-            'name': fullName,
-            'auth_id': user.id,
-            'linking_suffix': suffix,
-          }).select().single();
-        }
-        
-        _patientProfile = patientRecord;
-        
-        if (_patientProfile!['linking_suffix'] == null ||
-            _patientProfile!['linking_suffix'].toString().isEmpty) {
-          final newSuffix = Random().nextInt(10000).toString().padLeft(4, '0');
-          _patientProfile!['linking_suffix'] = newSuffix;
-          _supabase.from('patients').update({'linking_suffix': newSuffix}).eq('id', _patientProfile!['id']).then((_) {}).catchError((_) {});
-        }
+        _patientProfile = await _supabase.from('patients').insert({
+          'name': fullName,
+          'auth_id': user.id,
+          'linking_suffix': suffix,
+        }).select().single();
 
         _setupRealtimeListeners();
       } catch (e) {
