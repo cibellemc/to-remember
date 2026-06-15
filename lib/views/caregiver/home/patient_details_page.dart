@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../view_models/caregiver_viewmodel.dart';
+import 'widgets/performance_chart.dart';
 
 class PatientDetailsPage extends StatefulWidget {
   const PatientDetailsPage({super.key});
@@ -11,6 +12,9 @@ class PatientDetailsPage extends StatefulWidget {
 }
 
 class _PatientDetailsPageState extends State<PatientDetailsPage> {
+  int _activeTab = 0;
+  String _selectedGameType = 'memoria';
+
   @override
   void initState() {
     super.initState();
@@ -263,259 +267,266 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
               foregroundColor: Colors.red,
               elevation: 2,
             ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            if (patient['status'] == 'inactive')
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                color: Colors.amber.shade100,
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.warning_amber_rounded, size: 16, color: Colors.amber),
-                    SizedBox(width: 8),
-                    Text(
-                      'Este vínculo está inativo. O monitoramento foi pausado.',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange),
-                    ),
-                  ],
-                ),
-              ),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 80, 24, 40),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF009688), Color(0xFF00796B)],
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(40),
-                  bottomRight: Radius.circular(40),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Colors.white,
-                      child: Text(
-                        (patient['name'] as String?)?[0].toUpperCase() ?? 'P',
-                        style: const TextStyle(
-                          fontSize: 40,
-                          color: Color(0xFF00796B),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          final patientId = patient['id'].toString();
+          await vm.fetchPatientGameData(patientId);
+          await vm.fetchPatientCaregivers(patientId);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              if (patient['status'] == 'inactive')
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  color: Colors.amber.shade100,
+                  child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      Icon(Icons.warning_amber_rounded, size: 16, color: Colors.amber),
+                      SizedBox(width: 8),
                       Text(
-                        patient['name'] ?? 'Paciente',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: () => _showEditDialog(context, patient, vm),
-                        icon: const Icon(Icons.edit_note_rounded,
-                            color: Colors.white70, size: 28),
-                        tooltip: 'Editar Perfil',
+                        'Este vínculo está inativo. O monitoramento foi pausado.',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          'Paciente Ativo',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                            fontSize: 12,
+                ),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(24, 80, 24, 40),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF009688), Color(0xFF00796B)],
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(40),
+                    bottomRight: Radius.circular(40),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Colors.white,
+                        child: Text(
+                          (patient['name'] as String?)?[0].toUpperCase() ?? 'P',
+                          style: const TextStyle(
+                            fontSize: 40,
+                            color: Color(0xFF00796B),
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                      if (patient['created_by'] == vm.authRepository.currentUser?.id) ...[
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          patient['name'] ?? 'Paciente',
+                          style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                         const SizedBox(width: 8),
+                        IconButton(
+                          onPressed: () => _showEditDialog(context, patient, vm),
+                          icon: const Icon(Icons.edit_note_rounded,
+                              color: Colors.white70, size: 28),
+                          tooltip: 'Editar Perfil',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
                         Container(
                           padding:
                               const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.amber.withValues(alpha: 0.9),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.star, color: Colors.white, size: 12),
-                              SizedBox(width: 4),
-                              Text(
-                                'Criado por você',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 32),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Visão Geral',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildSmallInfoCard(
-                          'Status',
-                          'Conectado',
-                          Icons.link,
-                          Colors.blue,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildSmallInfoCard(
-                          'Estágio',
-                          _formatStage(patient['stage']),
-                          Icons.trending_up,
-                          Colors.orange,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // New View Switcher Card
-                  InkWell(
-                    key: const Key('card_patient_view'),
-                    onTap: () {
-                      vm.authRepository.setRoleOverride('patient', patientId: patient['id'].toString());
-                    },
-                    borderRadius: BorderRadius.circular(24),
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.blue.shade50, Colors.white],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.blue.shade100),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade100,
-                              shape: BoxShape.circle,
+                          child: const Text(
+                            'Paciente Ativo',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 12,
                             ),
-                            child: Icon(Icons.visibility_rounded, color: Colors.blue.shade700),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                        if (patient['created_by'] == vm.authRepository.currentUser?.id) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
+                                Icon(Icons.star, color: Colors.white, size: 12),
+                                SizedBox(width: 4),
                                 Text(
-                                  'Visão do Paciente',
+                                  'Criado por você',
                                   style: TextStyle(
-                                    fontSize: 18,
+                                    color: Colors.white,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.blue.shade900,
-                                  ),
-                                ),
-                                Text(
-                                  'Ver interface e jogar como este paciente',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.blue.shade700,
+                                    fontSize: 11,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.blue.shade300),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              _buildTabSelector(),
+
+              if (_activeTab == 0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Visão Geral',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildSmallInfoCard(
+                              'Status',
+                              'Conectado',
+                              Icons.link,
+                              Colors.blue,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildSmallInfoCard(
+                              'Estágio',
+                              _formatStage(patient['stage']),
+                              Icons.trending_up,
+                              Colors.orange,
+                            ),
+                          ),
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 16),
+                      // New View Switcher Card
+                      InkWell(
+                        key: const Key('card_patient_view'),
+                        onTap: () {
+                          vm.authRepository.setRoleOverride('patient', patientId: patient['id'].toString());
+                        },
+                        borderRadius: BorderRadius.circular(24),
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [Colors.blue.shade50, Colors.white],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: Colors.blue.shade100),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade100,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.visibility_rounded, color: Colors.blue.shade700),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Visão do Paciente',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blue.shade900,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Ver interface e jogar como este paciente',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.blue.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.blue.shade300),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+
+                      if (vm.authRepository.currentRole != 'professional') ...[
+                        const Text(
+                          'Equipe de Cuidado',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (vm.patientCaregivers.isEmpty)
+                          const Text('Carregando cuidadores...')
+                        else
+                          ...vm.patientCaregivers.map((cg) => _buildCaregiverTile(cg)),
+                        const SizedBox(height: 32),
+                      ],
+
+                      // Espaço para o FAB não sobrepor o conteúdo
+                      const SizedBox(height: 80),
+                    ],
                   ),
-                  const SizedBox(height: 32),
-
-                  const SizedBox(height: 16),
-
-                  const SizedBox(height: 32),
-
-                  if (vm.authRepository.currentRole != 'professional') ...[
-                    const Text(
-                    'Equipe de Cuidado',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E293B),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (vm.patientCaregivers.isEmpty)
-                    const Text('Carregando cuidadores...')
-                  else
-                    ...vm.patientCaregivers.map((cg) => _buildCaregiverTile(cg)),
-                    const SizedBox(height: 32),
-                  ],
-
-                  // Espaço para o FAB não sobrepor o conteúdo
-                  const SizedBox(height: 80),
-                ],
-              ),
-            ),
-          ],
+                )
+              else
+                _buildDesempenhoTab(vm),
+            ],
+          ),
         ),
       ),
     );
@@ -595,6 +606,582 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTabSelector() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _activeTab = 0),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _activeTab == 0 ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: _activeTab == 0
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          )
+                        ]
+                      : null,
+                ),
+                child: Text(
+                  'Perfil & Equipe',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _activeTab == 0 ? const Color(0xFF009688) : Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _activeTab = 1),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: _activeTab == 1 ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: _activeTab == 1
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          )
+                        ]
+                      : null,
+                ),
+                child: Text(
+                  'Desempenho & Jogos',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _activeTab == 1 ? const Color(0xFF009688) : Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesempenhoTab(CaregiverViewModel vm) {
+    if (vm.isLoadingGameData) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 48),
+          child: CircularProgressIndicator(color: Color(0xFF009688)),
+        ),
+      );
+    }
+
+    final sessions = vm.patientGameSessions;
+    final totalSessions = sessions.length;
+
+    // Calculate accuracy (precision)
+    double avgAccuracy = 0.0;
+    int totalHits = 0;
+    int totalMistakes = 0;
+    for (var s in sessions) {
+      totalHits += (s['hits'] as int? ?? 0);
+      totalMistakes += (s['mistakes'] as int? ?? 0);
+    }
+    if (totalHits + totalMistakes > 0) {
+      avgAccuracy = totalHits / (totalHits + totalMistakes);
+    }
+
+    // Calculate average response time
+    double avgResponseTimeSec = 0.0;
+    int validTimeSessions = 0;
+    double sumResponseTimeSec = 0.0;
+    for (var s in sessions) {
+      final t = s['avg_response_time_ms'] as num?;
+      if (t != null && t > 0) {
+        sumResponseTimeSec += t / 1000.0;
+        validTimeSessions++;
+      }
+    }
+    if (validTimeSessions > 0) {
+      avgResponseTimeSec = sumResponseTimeSec / validTimeSessions;
+    }
+
+    // Current levels
+    int levelMemoria = 1;
+    int levelOcorrencias = 1;
+    int levelMatching = 1;
+    for (var prog in vm.patientGameProgressList) {
+      final gt = prog['game_type']?.toString();
+      final lvl = prog['current_level'] as int? ?? 1;
+      if (gt == 'memoria') {
+        levelMemoria = lvl;
+      } else if (gt == 'ocorrencias') {
+        levelOcorrencias = lvl;
+      } else if (gt == 'matching') {
+        levelMatching = lvl;
+      }
+    }
+
+    // Filter sessions for selected game type in the chart
+    final filteredSessions = sessions.where((s) => s['game_type'] == _selectedGameType).toList();
+    // For chart, show chronologically (oldest to newest), limit to last 10
+    final chartSessions = filteredSessions.reversed.take(10).toList();
+
+    final List<double> chartData = [];
+    final List<String> chartLabels = [];
+    for (int i = 0; i < chartSessions.length; i++) {
+      final s = chartSessions[i];
+      final h = s['hits'] as int? ?? 0;
+      final m = s['mistakes'] as int? ?? 0;
+      final tot = h + m;
+      final acc = tot > 0 ? h / tot : 0.0;
+      chartData.add(acc);
+
+      try {
+        final date = DateTime.parse(s['played_at'].toString()).toLocal();
+        chartLabels.add("${date.day}/${date.month}");
+      } catch (_) {
+        chartLabels.add("#${i + 1}");
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section Title
+          const Text(
+            'Métricas Gerais',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Metrics grid
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  'Partidas',
+                  '$totalSessions',
+                  Icons.sports_esports,
+                  const Color(0xFF009688),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatCard(
+                  'Precisão',
+                  totalSessions > 0 ? '${(avgAccuracy * 100).toStringAsFixed(0)}%' : '-',
+                  Icons.check_circle_outline,
+                  Colors.green,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatCard(
+                  'Tempo Médio',
+                  avgResponseTimeSec > 0 ? '${avgResponseTimeSec.toStringAsFixed(1)}s' : '-',
+                  Icons.timer_outlined,
+                  Colors.orange,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 28),
+
+          // Current levels card
+          const Text(
+            'Progresso de Nível',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.grey.shade100),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                _buildLevelRow('Jogo da Memória', levelMemoria, Icons.psychology),
+                const SizedBox(height: 16),
+                _buildLevelRow('Encontre as Ocorrências', levelOcorrencias, Icons.grid_on),
+                const SizedBox(height: 16),
+                _buildLevelRow('Correspondência', levelMatching, Icons.extension),
+              ],
+            ),
+          ),
+          const SizedBox(height: 28),
+
+          // Chart Section
+          const Text(
+            'Gráfico de Evolução',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Game selection pills
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildGamePill('memoria', 'Memória'),
+                const SizedBox(width: 8),
+                _buildGamePill('ocorrencias', 'Ocorrências'),
+                const SizedBox(width: 8),
+                _buildGamePill('matching', 'Correspondência'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          PerformanceChart(
+            dataPoints: chartData,
+            xLabels: chartLabels,
+            minY: 0.0,
+            maxY: 1.0,
+            yLabelFormatter: (val) => '${(val * 100).toInt()}%',
+            color: const Color(0xFF009688),
+            emptyMessage: 'Sem partidas registradas ainda.',
+          ),
+          const SizedBox(height: 28),
+
+          // Sessions History list
+          const Text(
+            'Histórico Recente',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (filteredSessions.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.grey.shade100),
+              ),
+              child: Center(
+                child: Text(
+                  'Nenhuma partida registrada para este jogo.',
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                ),
+              ),
+            )
+          else
+            ...filteredSessions.take(15).map((s) => _buildSessionTile(s)),
+
+          const SizedBox(height: 100),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLevelRow(String title, int level, IconData icon) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: const Color(0xFF009688), size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF334155)),
+              ),
+            ),
+            Text(
+              'Nível $level de 5',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: level / 5.0,
+            minHeight: 6,
+            backgroundColor: Colors.grey.shade100,
+            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF009688)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGamePill(String type, String label) {
+    final isSelected = _selectedGameType == type;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedGameType = type),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF009688) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF009688) : Colors.grey.shade200,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF009688).withValues(alpha: 0.2),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey.shade700,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.01),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: TextStyle(fontSize: 10, color: Colors.grey.shade400, fontWeight: FontWeight.w600),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDateTime(String? dateStr) {
+    if (dateStr == null) return '';
+    try {
+      final dt = DateTime.parse(dateStr).toLocal();
+      final now = DateTime.now();
+      
+      final isToday = dt.year == now.year && dt.month == now.month && dt.day == now.day;
+      final isYesterday = dt.year == now.year && dt.month == now.month && dt.day == now.day - 1;
+      
+      final hourStr = dt.hour.toString().padLeft(2, '0');
+      final minStr = dt.minute.toString().padLeft(2, '0');
+      final timeStr = "$hourStr:$minStr";
+      
+      if (isToday) {
+        return "Hoje, $timeStr";
+      } else if (isYesterday) {
+        return "Ontem, $timeStr";
+      } else {
+        final months = [
+          'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+          'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
+        ];
+        return "${dt.day} de ${months[dt.month - 1]}, $timeStr";
+      }
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
+  Widget _buildSessionTile(Map<String, dynamic> session) {
+    final gameType = session['game_type']?.toString() ?? '';
+    final initialLevel = session['initial_level'] as int? ?? 1;
+    final finalLevel = session['final_level'] as int? ?? 1;
+    final hits = session['hits'] as int? ?? 0;
+    final mistakes = session['mistakes'] as int? ?? 0;
+    final total = hits + mistakes;
+    final accuracy = total > 0 ? (hits / total) : 0.0;
+    final avgTimeMs = session['avg_response_time_ms'] as int? ?? 0;
+    final playedAt = session['played_at']?.toString();
+    final decision = session['fuzzy_decision']?.toString() ?? 'Manter';
+
+    String gameName = 'Jogo';
+    IconData gameIcon = Icons.sports_esports;
+    if (gameType == 'memoria') {
+      gameName = 'Jogo da Memória';
+      gameIcon = Icons.psychology;
+    } else if (gameType == 'ocorrencias') {
+      gameName = 'Encontre as Ocorrências';
+      gameIcon = Icons.grid_on;
+    } else if (gameType == 'matching') {
+      gameName = 'Correspondência';
+      gameIcon = Icons.extension;
+    }
+
+    // Color and icons for fuzzy decision
+    Color decisionColor = Colors.grey;
+    IconData decisionIcon = Icons.trending_flat;
+    if (decision == 'Aumentar') {
+      decisionColor = Colors.green;
+      decisionIcon = Icons.trending_up;
+    } else if (decision == 'Diminuir') {
+      decisionColor = Colors.orange;
+      decisionIcon = Icons.trending_down;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF009688).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(gameIcon, color: const Color(0xFF009688), size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      gameName,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B)),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatDateTime(playedAt),
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                    ),
+                  ],
+                ),
+              ),
+              // Decision badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: decisionColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(decisionIcon, color: decisionColor, size: 12),
+                    const SizedBox(width: 4),
+                    Text(
+                      decision,
+                      style: TextStyle(
+                        color: decisionColor,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildSessionStatDetail('Nível', '$initialLevel ➔ $finalLevel'),
+              _buildSessionStatDetail('Acertos', '$hits/$total (${(accuracy * 100).toStringAsFixed(0)}%)'),
+              _buildSessionStatDetail('Tempo Médio', avgTimeMs > 0 ? '${(avgTimeMs / 1000).toStringAsFixed(1)}s' : '-'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSessionStatDetail(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+        ),
+      ],
     );
   }
 

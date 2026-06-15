@@ -22,6 +22,15 @@ class CaregiverViewModel extends ChangeNotifier {
   List<Map<String, dynamic>> _patientCaregivers = [];
   List<Map<String, dynamic>> get patientCaregivers => _patientCaregivers;
 
+  List<Map<String, dynamic>> _patientGameSessions = [];
+  List<Map<String, dynamic>> get patientGameSessions => _patientGameSessions;
+
+  List<Map<String, dynamic>> _patientGameProgressList = [];
+  List<Map<String, dynamic>> get patientGameProgressList => _patientGameProgressList;
+
+  bool _isLoadingGameData = false;
+  bool get isLoadingGameData => _isLoadingGameData;
+
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
@@ -81,9 +90,13 @@ class CaregiverViewModel extends ChangeNotifier {
   void selectPatient(Map<String, dynamic>? patient) {
     _selectedPatient = patient;
     if (patient != null) {
-      fetchPatientCaregivers(patient['id'].toString());
+      final patientId = patient['id'].toString();
+      fetchPatientCaregivers(patientId);
+      fetchPatientGameData(patientId);
     } else {
       _patientCaregivers = [];
+      _patientGameSessions = [];
+      _patientGameProgressList = [];
     }
     notifyListeners();
   }
@@ -94,6 +107,20 @@ class CaregiverViewModel extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Error fetching patient caregivers: $e');
+    }
+  }
+
+  Future<void> fetchPatientGameData(String patientId) async {
+    _isLoadingGameData = true;
+    notifyListeners();
+    try {
+      _patientGameSessions = await _authRepository.getGameSessions(patientId);
+      _patientGameProgressList = await _authRepository.getPatientAllGameProgress(patientId);
+    } catch (e) {
+      debugPrint('Error fetching patient game data: $e');
+    } finally {
+      _isLoadingGameData = false;
+      notifyListeners();
     }
   }
 

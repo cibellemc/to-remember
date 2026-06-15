@@ -1008,4 +1008,33 @@ class AuthRepository extends ChangeNotifier {
       debugPrint('Error clearing game checkpoint: $e');
     }
   }
+
+  /// Fetches game sessions history for a patient.
+  Future<List<Map<String, dynamic>>> getGameSessions(String patientId) async {
+    try {
+      final response = await _supabase
+          .from('game_sessions')
+          .select()
+          .eq('patient_id', patientId)
+          .order('played_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response as List);
+    } catch (e) {
+      debugPrint('Error fetching game sessions: $e');
+      return [];
+    }
+  }
+
+  /// Fetches all game progress records for a patient.
+  Future<List<Map<String, dynamic>>> getPatientAllGameProgress(String patientId) async {
+    try {
+      final response = await _supabase
+          .from('patient_game_progress')
+          .select()
+          .eq('patient_id', patientId);
+      return List<Map<String, dynamic>>.from(response as List);
+    } catch (e) {
+      debugPrint('Error fetching all game progress: $e');
+      return [];
+    }
+  }
 }
