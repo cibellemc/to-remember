@@ -303,7 +303,10 @@ class _RegistrationPageState extends State<RegistrationPage> {
               title: 'JOGAR',
               icon: Icons.extension,
               color: const Color(0xFF1565C0), // Blue 800 (Alto contraste AAA)
-              onTap: () async {
+              isLoading: vm.isLoading,
+              onTap: vm.isLoading
+                  ? null
+                  : () async {
             vm.setRole('patient');
             final success = await vm.finishRegistration();
             if (success && mounted) {
@@ -325,7 +328,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
           title: 'ACOMPANHAR\nPACIENTE',
           icon: Icons.volunteer_activism, // Ícone sugerindo cuidado, apoio e conexão
           color: const Color(0xFF00695C), // Teal 800 (Alto contraste AAA)
-          onTap: () {
+          onTap: vm.isLoading
+              ? null
+              : () {
             vm.setRole('caregiver');
             Future.delayed(
               const Duration(milliseconds: 100),
@@ -357,10 +362,11 @@ class _RegistrationPageState extends State<RegistrationPage> {
     required String title,
     required IconData icon,
     required Color color,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
+    bool isLoading = false,
   }) {
     return Material(
-      color: color,
+      color: onTap == null ? color.withValues(alpha: 0.6) : color,
       borderRadius: BorderRadius.circular(24),
       elevation: 4, // Adiciona um pequeno sombreamento para destacar o clique (acessibilidade visual)
       child: InkWell(
@@ -372,7 +378,17 @@ class _RegistrationPageState extends State<RegistrationPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 88, color: Colors.white),
+              if (isLoading)
+                const SizedBox(
+                  width: 88,
+                  height: 88,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 6,
+                  ),
+                )
+              else
+                Icon(icon, size: 88, color: Colors.white),
               const SizedBox(height: 16),
               Text(
                 title,
