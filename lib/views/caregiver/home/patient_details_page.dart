@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../view_models/caregiver_viewmodel.dart';
+import '../../../data/repositories/auth_repository.dart';
 import 'widgets/performance_chart.dart';
 
 class PatientDetailsPage extends StatefulWidget {
@@ -182,54 +183,6 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
     );
   }
 
-  Widget _buildSmallInfoCard(
-      String title, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF64748B),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<CaregiverViewModel>();
@@ -242,11 +195,15 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
       );
     }
 
+    final birthDateStr = patient['birth_date'];
+    final formattedDate = birthDateStr != null ? vm.authRepository.formatDateBR(birthDateStr) : null;
+    final age = birthDateStr != null ? _calculateAge(birthDateStr) : null;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text(''),
+        title: const Text('Detalhes do paciente'),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.white,
@@ -282,7 +239,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                 ),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(24, 80, 24, 40),
+                padding: const EdgeInsets.fromLTRB(24, 100, 24, 32),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -296,94 +253,83 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                 ),
                 child: Column(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.white,
-                        child: Text(
-                          (patient['name'] as String?)?[0].toUpperCase() ?? 'P',
-                          style: const TextStyle(
-                            fontSize: 40,
-                            color: Color(0xFF00796B),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                    Text(
+                      patient['name'] ?? 'Paciente',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          patient['name'] ?? 'Paciente',
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          onPressed: () => _showEditDialog(context, patient, vm),
-                          icon: const Icon(Icons.edit_note_rounded,
-                              color: Colors.white70, size: 28),
-                          tooltip: 'Editar Perfil',
-                        ),
-                      ],
+                    const SizedBox(height: 8),
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          if (age != null) ...[
+                            TextSpan(
+                              text: '$age anos',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            TextSpan(
+                              text: ' | Nascido em ${formattedDate ?? ''}',
+                            ),
+                          ] else
+                            TextSpan(
+                              text: 'Nascido em ${formattedDate ?? 'Não informado'}',
+                            ),
+                        ],
+                      ),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(20),
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          const TextSpan(text: 'Estágio '),
+                          TextSpan(
+                            text: _formatStage(patient['stage']),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          child: const Text(
-                            'Paciente Ativo',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                        if (patient['created_by'] == vm.authRepository.currentUser?.id) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.amber.withValues(alpha: 0.9),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.star, color: Colors.white, size: 12),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Criado por você',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          const TextSpan(text: ' do Alzheimer'),
                         ],
-                      ],
+                      ),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
                     ),
+                    if (patient['created_by'] == vm.authRepository.currentUser?.id) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.star, color: Colors.white, size: 12),
+                            SizedBox(width: 4),
+                            Text(
+                              'Criado por você',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -396,8 +342,9 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const SizedBox(height: 16),
                       const Text(
-                        'Visão Geral',
+                        'Ações',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -405,83 +352,45 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildSmallInfoCard(
-                              'Status',
-                              'Conectado',
-                              Icons.link,
-                              Colors.blue,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildSmallInfoCard(
-                              'Estágio',
-                              _formatStage(patient['stage']),
-                              Icons.trending_up,
-                              Colors.orange,
-                            ),
-                          ),
-                        ],
+                      _buildActionButton(
+                        icon: Icons.bar_chart_rounded,
+                        label: 'Ver Desempenho',
+                        subtitle: 'Histórico de jogos, métricas e gráficos de evolução',
+                        color: Colors.indigo.shade700,
+                        onTap: () {
+                          setState(() => _activeTab = 1);
+                        },
                       ),
-                      const SizedBox(height: 16),
-                      // New View Switcher Card
-                      InkWell(
-                        key: const Key('card_patient_view'),
+                      _buildActionButton(
+                        icon: Icons.edit_note_rounded,
+                        label: 'Editar Paciente',
+                        subtitle: 'Alterar nome, data de nascimento ou estágio',
+                        color: const Color(0xFF009688),
+                        onTap: () => _showEditDialog(context, patient, vm),
+                      ),
+                      _buildActionButton(
+                        icon: Icons.visibility_rounded,
+                        label: 'Visão do Paciente',
+                        subtitle: 'Ver interface e jogar como este paciente',
+                        color: Colors.blue.shade700,
                         onTap: () {
                           vm.authRepository.setRoleOverride('patient', patientId: patient['id'].toString());
                         },
-                        borderRadius: BorderRadius.circular(24),
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Colors.blue.shade50, Colors.white],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: Colors.blue.shade100),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade100,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(Icons.visibility_rounded, color: Colors.blue.shade700),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Visão do Paciente',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.blue.shade900,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Ver interface e jogar como este paciente',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.blue.shade700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.blue.shade300),
-                            ],
-                          ),
-                        ),
+                      ),
+                      _buildActionButton(
+                        icon: patient['status'] == 'inactive' ? Icons.restore_rounded : Icons.link_off_rounded,
+                        label: patient['status'] == 'inactive' ? 'Reativar Paciente' : 'Desconectar Paciente',
+                        subtitle: patient['status'] == 'inactive'
+                            ? 'Restabelecer o vínculo com este paciente'
+                            : 'Remover o vínculo com este paciente',
+                        color: patient['status'] == 'inactive' ? const Color(0xFF009688) : Colors.red.shade700,
+                        onTap: () {
+                          if (patient['status'] == 'inactive') {
+                            _showReactivationDialog(context, vm, patient);
+                          } else {
+                            _showDisconnectConfirm(context, patient, vm);
+                          }
+                        },
                       ),
                       const SizedBox(height: 32),
 
@@ -501,7 +410,6 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                           ...vm.patientCaregivers.map((cg) => _buildCaregiverTile(cg)),
                         const SizedBox(height: 32),
                       ],
-                      _buildPatientActionButton(context, patient, vm),
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -592,53 +500,83 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
     );
   }
 
-  Widget _buildPatientActionButton(BuildContext context, Map<String, dynamic> patient, CaregiverViewModel vm) {
-    final status = patient['status'];
-    final isInactive = status == 'inactive';
-
-    final label = isInactive ? 'Reativar Paciente' : 'Desconectar Paciente';
-    final icon = isInactive ? Icons.restore_rounded : Icons.link_off_rounded;
-    final color = isInactive ? const Color(0xFF009688) : Colors.red.shade700;
-
-    return InkWell(
-      onTap: () => isInactive 
-          ? _showReactivationDialog(context, vm, patient) 
-          : _showDisconnectConfirm(context, patient, vm),
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: color.withValues(alpha: 0.1)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: color.withValues(alpha: 0.1)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 22),
               ),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: color,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: color,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: color.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            Icon(Icons.arrow_forward_ios_rounded, size: 14, color: color.withValues(alpha: 0.5)),
-          ],
+              Icon(Icons.arrow_forward_ios_rounded, size: 14, color: color.withValues(alpha: 0.5)),
+            ],
+          ),
         ),
       ),
     );
   }
+
+  int? _calculateAge(String? birthDateStr) {
+    if (birthDateStr == null) return null;
+    try {
+      final birthDate = DateTime.parse(birthDateStr);
+      final today = DateTime.now();
+      int age = today.year - birthDate.year;
+      if (today.month < birthDate.month ||
+          (today.month == birthDate.month && today.day < birthDate.day)) {
+        age--;
+      }
+      return age;
+    } catch (_) {
+      return null;
+    }
+  }
+
 
   Widget _buildTabSelector() {
     return Container(
