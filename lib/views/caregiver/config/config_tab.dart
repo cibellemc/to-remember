@@ -40,12 +40,13 @@ class ConfigTab extends StatelessWidget {
         ),
         const SizedBox(height: 32),
         const Divider(),
-        const SizedBox(height: 12),
-        _buildConfigItem(
-          icon: Icons.logout,
-          title: 'Sair da Conta',
+        const SizedBox(height: 16),
+        _buildRedActionButton(
+          context: context,
+          icon: Icons.logout_rounded,
+          label: 'Sair da Conta',
           subtitle: 'Desconectar deste dispositivo',
-          isDestructive: true,
+          color: Colors.red.shade700,
           onTap: () async {
             final confirm = await showDialog<bool>(
               context: context,
@@ -287,6 +288,67 @@ class ConfigTab extends StatelessWidget {
               ),
             ),
             Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey.shade400),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRedActionButton({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    String? subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.1)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: color.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, size: 14, color: color.withValues(alpha: 0.5)),
           ],
         ),
       ),

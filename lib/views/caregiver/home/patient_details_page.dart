@@ -251,22 +251,6 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
         elevation: 0,
         foregroundColor: Colors.white,
       ),
-      floatingActionButton: patient['status'] == 'inactive'
-          ? FloatingActionButton.extended(
-              onPressed: () => _showReactivationDialog(context, vm, patient),
-              icon: const Icon(Icons.restore_rounded),
-              label: const Text('Reativar Paciente'),
-              backgroundColor: const Color(0xFF009688),
-              foregroundColor: Colors.white,
-            )
-          : FloatingActionButton.extended(
-              onPressed: () => _showDisconnectConfirm(context, patient, vm),
-              icon: const Icon(Icons.link_off, size: 20),
-              label: const Text('Desconectar'),
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.red,
-              elevation: 2,
-            ),
       body: RefreshIndicator(
         onRefresh: () async {
           final patientId = patient['id'].toString();
@@ -517,9 +501,8 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                           ...vm.patientCaregivers.map((cg) => _buildCaregiverTile(cg)),
                         const SizedBox(height: 32),
                       ],
-
-                      // Espaço para o FAB não sobrepor o conteúdo
-                      const SizedBox(height: 80),
+                      _buildPatientActionButton(context, patient, vm),
+                      const SizedBox(height: 40),
                     ],
                   ),
                 )
@@ -605,6 +588,54 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPatientActionButton(BuildContext context, Map<String, dynamic> patient, CaregiverViewModel vm) {
+    final status = patient['status'];
+    final isInactive = status == 'inactive';
+
+    final label = isInactive ? 'Reativar Paciente' : 'Desconectar Paciente';
+    final icon = isInactive ? Icons.restore_rounded : Icons.link_off_rounded;
+    final color = isInactive ? const Color(0xFF009688) : Colors.red.shade700;
+
+    return InkWell(
+      onTap: () => isInactive 
+          ? _showReactivationDialog(context, vm, patient) 
+          : _showDisconnectConfirm(context, patient, vm),
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: color.withValues(alpha: 0.1)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, size: 14, color: color.withValues(alpha: 0.5)),
+          ],
+        ),
       ),
     );
   }
