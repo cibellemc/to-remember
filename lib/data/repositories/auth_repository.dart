@@ -21,7 +21,7 @@ class AuthRepository extends ChangeNotifier {
   bool _hasHadSession = false;
   bool get hasHadSession => _hasHadSession;
 
-  bool _isPinSet = true; 
+  bool _isPinSet = true;
   bool get isPinSet => _isPinSet;
 
   // State properties for reactivity
@@ -41,7 +41,7 @@ class AuthRepository extends ChangeNotifier {
   String? _lastSubscribedPatientId;
   String? _roleOverride;
   String? _emulatedPatientId;
-  bool _isGeneratingCode = false; 
+  bool _isGeneratingCode = false;
 
   String? get roleOverride => _roleOverride;
   String? get emulatedPatientId => _emulatedPatientId;
@@ -49,7 +49,7 @@ class AuthRepository extends ChangeNotifier {
   String? get currentRole =>
       _roleOverride ?? currentUser?.userMetadata?['role'] as String?;
 
-  /// Returns the actual role of the user (professional/family/patient) 
+  /// Returns the actual role of the user (professional/family/patient)
   /// ignoring any role override (like "Patient View").
   String? get realRole {
     final meta = currentUser?.userMetadata;
@@ -77,24 +77,30 @@ class AuthRepository extends ChangeNotifier {
     if (user != null && role == 'patient') {
       try {
         // 1. Ensure Profile exists (run asynchronously to save time)
-        _supabase.from('profiles').upsert({
-          'id': user.id,
-          'full_name': fullName,
-          'role': 'patient',
-        }).then((_) {}).catchError((e) => debugPrint('Error upserting profile: $e'));
+        _supabase
+            .from('profiles')
+            .upsert({'id': user.id, 'full_name': fullName, 'role': 'patient'})
+            .then((_) {})
+            .catchError((e) => debugPrint('Error upserting profile: $e'));
 
         // 2. Create the Patient record directly: this is a brand-new anonymous
         // user (signInAnonymously is only called when there was no session yet),
         // so there can't be an existing 'patients' row for this auth_id and a
         // select-before-insert round trip would be wasted latency.
         final match = RegExp(r'#(\d{4})').firstMatch(fullName);
-        final suffix = match?.group(1) ?? Random().nextInt(10000).toString().padLeft(4, '0');
+        final suffix =
+            match?.group(1) ??
+            Random().nextInt(10000).toString().padLeft(4, '0');
 
-        _patientProfile = await _supabase.from('patients').insert({
-          'name': fullName,
-          'auth_id': user.id,
-          'linking_suffix': suffix,
-        }).select().single();
+        _patientProfile = await _supabase
+            .from('patients')
+            .insert({
+              'name': fullName,
+              'auth_id': user.id,
+              'linking_suffix': suffix,
+            })
+            .select()
+            .single();
 
         _setupRealtimeListeners();
       } catch (e) {
@@ -163,9 +169,8 @@ class AuthRepository extends ChangeNotifier {
                 'name': patientName,
                 'stage': metadata['patient_stage'],
                 'birth_date': _tryFormatDate(metadata['patient_birthdate']),
-                'linking_suffix': RegExp(r'#(\d{4})')
-                        .firstMatch(patientName)
-                        ?.group(1) ??
+                'linking_suffix':
+                    RegExp(r'#(\d{4})').firstMatch(patientName)?.group(1) ??
                     Random().nextInt(10000).toString().padLeft(4, '0'),
                 'auth_id':
                     null, // Explicitly null for caregiver-created patients
@@ -247,8 +252,8 @@ class AuthRepository extends ChangeNotifier {
         try {
           await _supabase
               .from('patients')
-              .update({'linking_suffix': newSuffix}).eq(
-                  'id', _patientProfile!['id']);
+              .update({'linking_suffix': newSuffix})
+              .eq('id', _patientProfile!['id']);
           _patientProfile!['linking_suffix'] = newSuffix;
         } catch (e) {
           debugPrint('Error repairing linking_suffix: $e');
@@ -318,12 +323,16 @@ class AuthRepository extends ChangeNotifier {
       // Double check for an existing active code to prevent race conditions
       final existingCode = await getActiveCodeForPatient(targetPatientId);
       if (existingCode != null) {
-        debugPrint('Active code already exists ($existingCode), skipping generation.');
+        debugPrint(
+          'Active code already exists ($existingCode), skipping generation.',
+        );
         return existingCode;
       }
 
       final code = _generateRandomCode(6);
-      debugPrint('Generating new connection code for patient: $targetPatientId');
+      debugPrint(
+        'Generating new connection code for patient: $targetPatientId',
+      );
       await _supabase.from('connection_codes').insert({
         'code': code.toUpperCase(),
         'patient_id': targetPatientId,
@@ -358,7 +367,8 @@ class AuthRepository extends ChangeNotifier {
           'name': name,
           'stage': stage,
           'birth_date': _tryFormatDate(birthdate),
-          'linking_suffix': RegExp(r'#(\d{4})').firstMatch(name)?.group(1) ??
+          'linking_suffix':
+              RegExp(r'#(\d{4})').firstMatch(name)?.group(1) ??
               Random().nextInt(10000).toString().padLeft(4, '0'),
           'auth_id': null, // Caregiver created patient
           'created_by': user.id,
@@ -766,8 +776,11 @@ class AuthRepository extends ChangeNotifier {
 
   // Security PIN and Role Override Methods
 
-  void setRoleOverride(String? role,
-      {String? patientId, Map<String, dynamic>? initialProfile}) async {
+  void setRoleOverride(
+    String? role, {
+    String? patientId,
+    Map<String, dynamic>? initialProfile,
+  }) async {
     _roleOverride = role;
     _emulatedPatientId = patientId;
 
@@ -975,15 +988,19 @@ class AuthRepository extends ChangeNotifier {
     required String gameType,
   }) async {
     try {
-      await _supabase.from('patient_game_progress').update({
-        'checkpoint_round': null,
-        'checkpoint_hits': null,
-        'checkpoint_mistakes': null,
-        'checkpoint_targets': null,
-        'checkpoint_used_ids': null,
-        'checkpoint_times': null,
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      }).eq('patient_id', patientId).eq('game_type', gameType);
+      await _supabase
+          .from('patient_game_progress')
+          .update({
+            'checkpoint_round': null,
+            'checkpoint_hits': null,
+            'checkpoint_mistakes': null,
+            'checkpoint_targets': null,
+            'checkpoint_used_ids': null,
+            'checkpoint_times': null,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('patient_id', patientId)
+          .eq('game_type', gameType);
     } catch (e) {
       debugPrint('Error clearing game checkpoint: $e');
     }
@@ -1005,7 +1022,9 @@ class AuthRepository extends ChangeNotifier {
   }
 
   /// Fetches all game progress records for a patient.
-  Future<List<Map<String, dynamic>>> getPatientAllGameProgress(String patientId) async {
+  Future<List<Map<String, dynamic>>> getPatientAllGameProgress(
+    String patientId,
+  ) async {
     try {
       final response = await _supabase
           .from('patient_game_progress')
