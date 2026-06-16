@@ -47,6 +47,7 @@ class _MatchingGamePageState extends State<MatchingGamePage> {
   Map<String, dynamic>? _target;
   List<Map<String, dynamic>> _options = [];
   List<double> _responseTimes = [];
+  final List<Map<String, dynamic>> _roundDetails = [];
   DateTime? _roundStart;
 
   /// IDs dos estímulos já usados como alvo nesta sessão.
@@ -168,6 +169,13 @@ class _MatchingGamePageState extends State<MatchingGamePage> {
       if (correct) { _hits++; } else { _mistakes++; }
     });
 
+    _roundDetails.add({
+      'round': _currentRound + 1,
+      'hits': correct ? 1 : 0,
+      'mistakes': correct ? 0 : 1,
+      'time_ms': elapsed,
+    });
+
     await Future.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
 
@@ -260,6 +268,8 @@ class _MatchingGamePageState extends State<MatchingGamePage> {
         fuzzyDecision: result.decision,
         performanceData: {
           'stimuli_used': usedStimuli.map((s) => s['nome_arquivo']).toList(),
+          'rounds': _totalRounds,
+          'round_details': List<Map<String, dynamic>>.from(_roundDetails),
         },
       ),
     ]);
@@ -270,6 +280,7 @@ class _MatchingGamePageState extends State<MatchingGamePage> {
         _hits = 0;
         _mistakes = 0;
         _responseTimes = [];
+        _roundDetails.clear();
         _initialLevel = _currentLevel;
         _usedTargetIds.clear(); // nova sessão → alvos renovados
         _buildRound();

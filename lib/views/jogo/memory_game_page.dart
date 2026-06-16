@@ -76,12 +76,15 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
   int _totalMistakes = 0;
   final List<double> _responseTimes  = [];
   final List<double> _sessionScores  = [];
+  final List<Map<String, dynamic>> _roundDetails = [];
 
   // ── Round-level ───────────────────────────────────────────────────────────
   int?      _firstIdx;
   int?      _secondIdx;
   bool      _isChecking   = false;
   int       _pairsFound   = 0;
+  int       _roundHits    = 0;
+  int       _roundMistakes = 0;
   DateTime? _roundStartTime;
 
   @override
@@ -268,8 +271,10 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
       for (final c in _cards) {
         c.faceUp = false;
       }
-      _previewPhase   = false;
-      _roundStartTime = DateTime.now();
+      _previewPhase    = false;
+      _roundStartTime  = DateTime.now();
+      _roundHits       = 0;
+      _roundMistakes   = 0;
     });
   }
 
@@ -297,6 +302,8 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
           _secondIdx = null;
           _isChecking = false;
           _pairsFound = 0;
+          _roundHits = 0;
+          _roundMistakes = 0;
           _isNextRoundReady = true;
         });
       }
@@ -325,6 +332,7 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
         _cards[_firstIdx!].matched = true;
         _cards[_secondIdx!].matched = true;
         _totalHits++;
+        _roundHits++;
         _pairsFound++;
         _firstIdx   = null;
         _secondIdx  = null;
@@ -338,11 +346,18 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
         for (final c in _cards) {
           if (c.matched) _sessionScores.add(c.selectionScore);
         }
+        _roundDetails.add({
+          'round': _currentRound + 1,
+          'hits': _roundHits,
+          'mistakes': _roundMistakes,
+          'time_ms': durationMs.round(),
+        });
         await Future.delayed(const Duration(milliseconds: 600));
         _nextRound();
       }
     } else {
       _totalMistakes++;
+      _roundMistakes++;
       await Future.delayed(const Duration(milliseconds: 900));
       if (!mounted) return;
       setState(() {
@@ -432,6 +447,7 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
         performanceData: {
           'pairs_count': _pairCounts[(_currentLevel - 1).clamp(0, 4)],
           'rounds': _totalRounds,
+          'round_details': List<Map<String, dynamic>>.from(_roundDetails),
         },
       ),
       repo.clearGameCheckpoint(
@@ -475,6 +491,9 @@ class _MemoryGamePageState extends State<MemoryGamePage> {
           _totalMistakes = 0;
           _responseTimes.clear();
           _sessionScores.clear();
+          _roundDetails.clear();
+          _roundHits     = 0;
+          _roundMistakes = 0;
           _cards = nextCards;
           _previewPhase = true;
           _firstIdx = null;

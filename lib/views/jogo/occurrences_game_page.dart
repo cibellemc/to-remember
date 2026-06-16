@@ -78,9 +78,11 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
   int _totalHits         = 0;
   int _totalMistakes     = 0;
   int _totalTargets      = 0;
+  int _roundMistakes     = 0;
 
   final Set<dynamic> _usedTargetIds = {};
   final List<double> _responseTimes = [];
+  final List<Map<String, dynamic>> _roundDetails = [];
   DateTime?          _boardShowTime;
 
   bool   _miniatureVisible = true;
@@ -226,10 +228,17 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
         _boardLocked = true;
         final durationMs = DateTime.now().difference(_boardShowTime!).inMilliseconds.toDouble();
         _responseTimes.add(durationMs / targetCount);
+        _roundDetails.add({
+          'round': _currentRound + 1,
+          'hits': _roundTargetsFound,
+          'mistakes': _roundMistakes,
+          'time_ms': durationMs.round(),
+        });
         Future.delayed(const Duration(milliseconds: 800), _nextRound);
       }
     } else {
       _totalMistakes++;
+      _roundMistakes++;
       setState(() => _wrongTapIndex = index);
       _wrongTapTimer?.cancel();
       _wrongTapTimer = Timer(const Duration(milliseconds: 500), () {
@@ -256,6 +265,7 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
       await Future.delayed(const Duration(milliseconds: 50));
       
       _currentRound++;
+      _roundMistakes = 0;
       _buildRound();
       await _precacheStimuli();
       
@@ -347,6 +357,7 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
         performanceData: {
           'total_targets': _totalTargets,
           'rounds': _totalRounds,
+          'round_details': List<Map<String, dynamic>>.from(_roundDetails),
         },
       ),
       repo.clearGameCheckpoint(
@@ -381,7 +392,9 @@ class _OccurrencesGamePageState extends State<OccurrencesGamePage> {
       _totalHits     = 0;
       _totalMistakes = 0;
       _totalTargets  = 0;
+      _roundMistakes = 0;
       _responseTimes.clear();
+      _roundDetails.clear();
       _sessionStimuli.clear();
       _initialLevel = _currentLevel;
       _usedTargetIds.clear();
