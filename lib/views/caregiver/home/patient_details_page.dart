@@ -13,7 +13,6 @@ class PatientDetailsPage extends StatefulWidget {
 }
 
 class _PatientDetailsPageState extends State<PatientDetailsPage> {
-
   @override
   void initState() {
     super.initState();
@@ -31,7 +30,9 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
       case 'avancado':
         return 'Avançado';
       default:
-        return s.isNotEmpty ? s[0].toUpperCase() + s.substring(1) : 'Não informado';
+        return s.isNotEmpty
+            ? s[0].toUpperCase() + s.substring(1)
+            : 'Não informado';
     }
   }
 
@@ -41,8 +42,10 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
     CaregiverViewModel vm,
   ) {
     // Check if this is the last active caregiver
-    final activeCount = vm.patientCaregivers.where((c) => (c['status'] ?? 'active') == 'active').length;
-    
+    final activeCount = vm.patientCaregivers
+        .where((c) => (c['status'] ?? 'active') == 'active')
+        .length;
+
     if (activeCount <= 1) {
       _showCannotDisconnectDialog(context, patient['name']);
       return;
@@ -80,7 +83,9 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                     onPressed: vm.isLoading
                         ? null
                         : () async {
-                            await vm.disconnectFromPatient(patient['id'].toString());
+                            await vm.disconnectFromPatient(
+                              patient['id'].toString(),
+                            );
                             if (vm.errorMessage == null && context.mounted) {
                               Navigator.pop(context); // Close dialog
                               Navigator.pop(context); // Go back to dashboard
@@ -91,7 +96,10 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.orange))
+                              strokeWidth: 2,
+                              color: Colors.orange,
+                            ),
+                          )
                         : const Text(
                             'Desconectar',
                             style: TextStyle(color: Colors.red),
@@ -113,7 +121,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
   ) {
     final nameController = TextEditingController(text: patient['name']);
     final birthdateController = TextEditingController(
-      text: vm.authRepository.formatDateBR(patient['birth_date'])
+      text: vm.authRepository.formatDateBR(patient['birth_date']),
     );
     String? selectedStage = patient['stage'];
 
@@ -130,21 +138,31 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
               const SizedBox(height: 8),
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Nome do paciente'),
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: 'Nome do paciente',
+                ),
               ),
               const SizedBox(height: 16),
-              const Text('Data de Nascimento', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Data de Nascimento',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
               TextField(
                 controller: birthdateController,
-                decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'DD/MM/YYYY'),
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: 'DD/MM/YYYY',
+                ),
                 keyboardType: TextInputType.number,
-                inputFormatters: [
-                  DateInputFormatter(),
-                ],
+                inputFormatters: [DateInputFormatter()],
               ),
               const SizedBox(height: 16),
-              const Text('Estágio do Alzheimer', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Estágio do Alzheimer',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: selectedStage,
@@ -160,7 +178,10 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
           ElevatedButton(
             onPressed: () async {
               await vm.updatePatient(
@@ -194,7 +215,9 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
     }
 
     final birthDateStr = patient['birth_date'];
-    final formattedDate = birthDateStr != null ? vm.authRepository.formatDateBR(birthDateStr) : null;
+    final formattedDate = birthDateStr != null
+        ? vm.authRepository.formatDateBR(birthDateStr)
+        : null;
     final age = birthDateStr != null ? _calculateAge(birthDateStr) : null;
 
     return Scaffold(
@@ -226,11 +249,19 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                   child: const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.warning_amber_rounded, size: 16, color: Colors.amber),
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        size: 16,
+                        color: Colors.amber,
+                      ),
                       SizedBox(width: 8),
                       Text(
                         'Este vínculo está inativo. O monitoramento foi pausado.',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange,
+                        ),
                       ),
                     ],
                   ),
@@ -267,14 +298,17 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                           if (age != null) ...[
                             TextSpan(
                               text: '$age anos',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             TextSpan(
                               text: ' | Nascido em ${formattedDate ?? ''}',
                             ),
                           ] else
                             TextSpan(
-                              text: 'Nascido em ${formattedDate ?? 'Não informado'}',
+                              text:
+                                  'Nascido em ${formattedDate ?? 'Não informado'}',
                             ),
                         ],
                       ),
@@ -297,16 +331,16 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                         ],
                       ),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                      ),
+                      style: const TextStyle(fontSize: 16, color: Colors.white),
                     ),
-                    if (patient['created_by'] == vm.authRepository.currentUser?.id) ...[
+                    if (patient['created_by'] ==
+                        vm.authRepository.currentUser?.id) ...[
                       const SizedBox(height: 12),
                       Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.amber.withValues(alpha: 0.9),
                           borderRadius: BorderRadius.circular(20),
@@ -350,7 +384,8 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                     _buildActionButton(
                       icon: Icons.bar_chart_rounded,
                       label: 'Ver Desempenho',
-                      subtitle: 'Histórico de jogos, métricas e gráficos de evolução',
+                      subtitle:
+                          'Histórico de jogos, métricas e gráficos de evolução',
                       color: Colors.indigo.shade700,
                       onTap: () {
                         Navigator.push(
@@ -377,16 +412,25 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                       subtitle: 'Ver interface e jogar como este paciente',
                       color: Colors.blue.shade700,
                       onTap: () {
-                        vm.authRepository.setRoleOverride('patient', patientId: patient['id'].toString());
+                        vm.authRepository.setRoleOverride(
+                          'patient',
+                          patientId: patient['id'].toString(),
+                        );
                       },
                     ),
                     _buildActionButton(
-                      icon: patient['status'] == 'inactive' ? Icons.restore_rounded : Icons.link_off_rounded,
-                      label: patient['status'] == 'inactive' ? 'Reativar Paciente' : 'Desconectar Paciente',
+                      icon: patient['status'] == 'inactive'
+                          ? Icons.restore_rounded
+                          : Icons.link_off_rounded,
+                      label: patient['status'] == 'inactive'
+                          ? 'Reativar Paciente'
+                          : 'Desconectar Paciente',
                       subtitle: patient['status'] == 'inactive'
                           ? 'Restabelecer o vínculo com este paciente'
                           : 'Remover o vínculo com este paciente',
-                      color: patient['status'] == 'inactive' ? const Color(0xFF009688) : Colors.red.shade700,
+                      color: patient['status'] == 'inactive'
+                          ? const Color(0xFF009688)
+                          : Colors.red.shade700,
                       onTap: () {
                         if (patient['status'] == 'inactive') {
                           _showReactivationDialog(context, vm, patient);
@@ -410,7 +454,9 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                       if (vm.patientCaregivers.isEmpty)
                         const Text('Carregando cuidadores...')
                       else
-                        ...vm.patientCaregivers.map((cg) => _buildCaregiverTile(cg)),
+                        ...vm.patientCaregivers.map(
+                          (cg) => _buildCaregiverTile(cg),
+                        ),
                       const SizedBox(height: 32),
                     ],
                     const SizedBox(height: 40),
@@ -437,13 +483,23 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isMe ? const Color(0xFF009688).withValues(alpha: 0.3) : const Color(0xFFF1F5F9)),
+        border: Border.all(
+          color: isMe
+              ? const Color(0xFF009688).withValues(alpha: 0.3)
+              : const Color(0xFFF1F5F9),
+        ),
       ),
       child: Row(
         children: [
           CircleAvatar(
             backgroundColor: const Color(0xFFF1F5F9),
-            child: Text(initials, style: const TextStyle(color: Color(0xFF009688), fontWeight: FontWeight.bold)),
+            child: Text(
+              initials,
+              style: const TextStyle(
+                color: Color(0xFF009688),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -467,12 +523,11 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
     );
   }
 
-
   Widget _buildCaregiverStatusBadge(String status) {
     final isActive = status == 'active';
     final greenColor = const Color(0xFF2E7D32);
     final greenBg = const Color(0xFFE8F5E9);
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -483,7 +538,9 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isActive ? Icons.check_circle_rounded : Icons.pause_circle_filled_rounded,
+            isActive
+                ? Icons.check_circle_rounded
+                : Icons.pause_circle_filled_rounded,
             size: 14,
             color: isActive ? greenColor : Colors.grey.shade600,
           ),
@@ -554,7 +611,11 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios_rounded, size: 14, color: color.withValues(alpha: 0.5)),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: color.withValues(alpha: 0.5),
+              ),
             ],
           ),
         ),
@@ -577,9 +638,6 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
       return null;
     }
   }
-
-
-  
 
   void _showCannotDisconnectDialog(BuildContext context, String patientName) {
     showDialog(
@@ -615,7 +673,9 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
           child: Consumer<CaregiverViewModel>(
             builder: (context, vm, child) {
               return AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
                 title: Text('Reativar ${patient['name']}'),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -625,24 +685,45 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                         padding: const EdgeInsets.only(bottom: 16),
                         child: Container(
                           padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)),
-                          child: Text(vm.errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            vm.errorMessage!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 13,
+                            ),
+                          ),
                         ),
                       ),
-                    const Text('Insira o código de vínculo para reativar o monitoramento.'),
+                    const Text(
+                      'Insira o código de vínculo para reativar o monitoramento.',
+                    ),
                     const SizedBox(height: 16),
                     TextField(
                       controller: codeController,
                       maxLength: 6,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 4),
-                      decoration: const InputDecoration(border: OutlineInputBorder(), counterText: ""),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 4,
+                      ),
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        counterText: "",
+                      ),
                       textCapitalization: TextCapitalization.characters,
                     ),
                   ],
                 ),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancelar'),
+                  ),
                   ElevatedButton(
                     onPressed: vm.isLoading
                         ? null
@@ -654,11 +735,16 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                             if (vm.errorMessage == null && context.mounted) {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Reativado com sucesso!'), backgroundColor: Colors.green),
+                                const SnackBar(
+                                  content: Text('Reativado com sucesso!'),
+                                  backgroundColor: Colors.green,
+                                ),
                               );
                             }
                           },
-                    child: vm.isLoading ? const CircularProgressIndicator() : const Text('REATIVAR'),
+                    child: vm.isLoading
+                        ? const CircularProgressIndicator()
+                        : const Text('REATIVAR'),
                   ),
                 ],
               );
@@ -707,7 +793,7 @@ class PatientPerformancePage extends StatefulWidget {
 }
 
 class _PatientPerformancePageState extends State<PatientPerformancePage> {
-  String _selectedGameType = 'memoria';
+  String _selectedGameType = 'memory';
 
   @override
   Widget build(BuildContext context) {
@@ -746,7 +832,10 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
       );
     }
 
-    final sessions = vm.patientGameSessions;
+    final allSessions = vm.patientGameSessions;
+    final sessions = allSessions
+        .where((s) => s['game_type'] == _selectedGameType)
+        .toList();
     final totalSessions = sessions.length;
 
     // Calculate accuracy (precision)
@@ -776,26 +865,28 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
       avgResponseTimeSec = sumResponseTimeSec / validTimeSessions;
     }
 
-    // Current levels
-    int levelMemoria = 1;
-    int levelOcorrencias = 1;
-    int levelMatching = 1;
+    // Current level for selected game
+    int currentLevel = 1;
+    String currentLevelTitle = '';
+    IconData currentLevelIcon = Icons.gamepad;
+
+    if (_selectedGameType == 'memory') {
+      currentLevelTitle = 'Jogo da Memória';
+      currentLevelIcon = Icons.psychology;
+    } else if (_selectedGameType == 'ocorrencias') {
+      currentLevelTitle = 'Encontre as Ocorrências';
+      currentLevelIcon = Icons.grid_on;
+    }
+
     for (var prog in vm.patientGameProgressList) {
-      final gt = prog['game_type']?.toString();
-      final lvl = prog['current_level'] as int? ?? 1;
-      if (gt == 'memoria') {
-        levelMemoria = lvl;
-      } else if (gt == 'ocorrencias') {
-        levelOcorrencias = lvl;
-      } else if (gt == 'matching') {
-        levelMatching = lvl;
+      if (prog['game_type']?.toString() == _selectedGameType) {
+        currentLevel = prog['current_level'] as int? ?? 1;
+        break;
       }
     }
 
-    // Filter sessions for selected game type in the chart
-    final filteredSessions = sessions.where((s) => s['game_type'] == _selectedGameType).toList();
     // For chart, show chronologically (oldest to newest), limit to last 10
-    final chartSessions = filteredSessions.reversed.take(10).toList();
+    final chartSessions = sessions.reversed.take(10).toList();
 
     final List<double> chartData = [];
     final List<String> chartLabels = [];
@@ -820,6 +911,28 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Game selection pills
+          const Text(
+            'Selecione o Jogo',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildGamePill('memory', 'Memória'),
+                const SizedBox(width: 12),
+                _buildGamePill('ocorrencias', 'Ocorrências'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+
           // Section Title
           const Text(
             'Métricas Gerais',
@@ -832,33 +945,31 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
           const SizedBox(height: 16),
 
           // Metrics grid
-          Row(
+          Column(
             children: [
-              Expanded(
-                child: _buildStatCard(
-                  'Partidas',
-                  '$totalSessions',
-                  Icons.sports_esports,
-                  const Color(0xFF009688),
-                ),
+              _buildStatCard(
+                'Partidas Jogadas',
+                '$totalSessions',
+                Icons.sports_esports,
+                const Color(0xFF009688),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
-                  'Precisão',
-                  totalSessions > 0 ? '${(avgAccuracy * 100).toStringAsFixed(0)}%' : '-',
-                  Icons.check_circle_outline,
-                  Colors.green,
-                ),
+              const SizedBox(height: 16),
+              _buildStatCard(
+                'Precisão Média',
+                totalSessions > 0
+                    ? '${(avgAccuracy * 100).toStringAsFixed(0)}%'
+                    : '-',
+                Icons.check_circle_outline,
+                Colors.green,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
-                  'Tempo Médio',
-                  avgResponseTimeSec > 0 ? '${avgResponseTimeSec.toStringAsFixed(1)}s' : '-',
-                  Icons.timer_outlined,
-                  Colors.orange,
-                ),
+              const SizedBox(height: 16),
+              _buildStatCard(
+                'Tempo de Resposta Médio',
+                avgResponseTimeSec > 0
+                    ? '${avgResponseTimeSec.toStringAsFixed(1)}s'
+                    : '-',
+                Icons.timer_outlined,
+                Colors.orange,
               ),
             ],
           ),
@@ -890,11 +1001,11 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
             ),
             child: Column(
               children: [
-                _buildLevelRow('Jogo da Memória', levelMemoria, Icons.psychology),
-                const SizedBox(height: 16),
-                _buildLevelRow('Encontre as Ocorrências', levelOcorrencias, Icons.grid_on),
-                const SizedBox(height: 16),
-                _buildLevelRow('Correspondência', levelMatching, Icons.extension),
+                _buildLevelRow(
+                  currentLevelTitle,
+                  currentLevel,
+                  currentLevelIcon,
+                ),
               ],
             ),
           ),
@@ -910,20 +1021,6 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
             ),
           ),
           const SizedBox(height: 12),
-          // Game selection pills
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildGamePill('memoria', 'Memória'),
-                const SizedBox(width: 8),
-                _buildGamePill('ocorrencias', 'Ocorrências'),
-                const SizedBox(width: 8),
-                _buildGamePill('matching', 'Correspondência'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
           PerformanceChart(
             dataPoints: chartData,
             xLabels: chartLabels,
@@ -945,7 +1042,7 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
             ),
           ),
           const SizedBox(height: 16),
-          if (filteredSessions.isEmpty)
+          if (sessions.isEmpty)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 32),
               width: double.infinity,
@@ -962,10 +1059,12 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
               ),
             )
           else
-            ...filteredSessions.take(15).map((s) => _SessionTile(
-              session: s,
-              formatDateTime: _formatDateTime,
-            )),
+            ...sessions
+                .take(15)
+                .map(
+                  (s) =>
+                      _SessionTile(session: s, formatDateTime: _formatDateTime),
+                ),
 
           const SizedBox(height: 100),
         ],
@@ -979,30 +1078,34 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
       children: [
         Row(
           children: [
-            Icon(icon, color: const Color(0xFF009688), size: 18),
-            const SizedBox(width: 8),
+            Icon(icon, color: const Color(0xFF009688), size: 24),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF334155)),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF334155),
+                ),
               ),
             ),
             Text(
               'Nível $level de 5',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 12,
+                fontSize: 15,
                 color: Colors.grey.shade600,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         ClipRRect(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(6),
           child: LinearProgressIndicator(
             value: level / 5.0,
-            minHeight: 6,
+            minHeight: 10,
             backgroundColor: Colors.grey.shade100,
             valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF009688)),
           ),
@@ -1016,65 +1119,91 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
     return GestureDetector(
       onTap: () => setState(() => _selectedGameType = type),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF009688) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? const Color(0xFF009688) : Colors.grey.shade200,
+            color: isSelected ? const Color(0xFF009688) : Colors.grey.shade300,
+            width: 1.5,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
                     color: const Color(0xFF009688).withValues(alpha: 0.2),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  )
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
                 ]
               : null,
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey.shade700,
+            color: isSelected ? Colors.white : Colors.grey.shade800,
             fontWeight: FontWeight.bold,
-            fontSize: 12,
+            fontSize: 16,
           ),
         ),
       ),
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.01),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: TextStyle(fontSize: 10, color: Colors.grey.shade400, fontWeight: FontWeight.w600),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 32),
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1087,8 +1216,10 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
       final dt = DateTime.parse(dateStr).toLocal();
       final now = DateTime.now();
 
-      final isToday = dt.year == now.year && dt.month == now.month && dt.day == now.day;
-      final isYesterday = dt.year == now.year && dt.month == now.month && dt.day == now.day - 1;
+      final isToday =
+          dt.year == now.year && dt.month == now.month && dt.day == now.day;
+      final isYesterday =
+          dt.year == now.year && dt.month == now.month && dt.day == now.day - 1;
 
       final hourStr = dt.hour.toString().padLeft(2, '0');
       final minStr = dt.minute.toString().padLeft(2, '0');
@@ -1100,8 +1231,18 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
         return "Ontem, $timeStr";
       } else {
         final months = [
-          'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-          'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
+          'Jan',
+          'Fev',
+          'Mar',
+          'Abr',
+          'Mai',
+          'Jun',
+          'Jul',
+          'Ago',
+          'Set',
+          'Out',
+          'Nov',
+          'Dez',
         ];
         return "${dt.day} de ${months[dt.month - 1]}, $timeStr";
       }
@@ -1119,10 +1260,7 @@ class _SessionTile extends StatefulWidget {
   final Map<String, dynamic> session;
   final String Function(String?) formatDateTime;
 
-  const _SessionTile({
-    required this.session,
-    required this.formatDateTime,
-  });
+  const _SessionTile({required this.session, required this.formatDateTime});
 
   @override
   State<_SessionTile> createState() => _SessionTileState();
@@ -1134,16 +1272,16 @@ class _SessionTileState extends State<_SessionTile> {
   @override
   Widget build(BuildContext context) {
     final session = widget.session;
-    final gameType     = session['game_type']?.toString() ?? '';
+    final gameType = session['game_type']?.toString() ?? '';
     final initialLevel = session['initial_level'] as int? ?? 1;
-    final finalLevel   = session['final_level'] as int? ?? 1;
-    final hits         = session['hits'] as int? ?? 0;
-    final mistakes     = session['mistakes'] as int? ?? 0;
-    final total        = hits + mistakes;
-    final accuracy     = total > 0 ? (hits / total) : 0.0;
-    final avgTimeMs    = session['avg_response_time_ms'] as int? ?? 0;
-    final playedAt     = session['played_at']?.toString();
-    final decision     = session['fuzzy_decision']?.toString() ?? 'Manter';
+    final finalLevel = session['final_level'] as int? ?? 1;
+    final hits = session['hits'] as int? ?? 0;
+    final mistakes = session['mistakes'] as int? ?? 0;
+    final total = hits + mistakes;
+    final accuracy = total > 0 ? (hits / total) : 0.0;
+    final avgTimeMs = session['avg_response_time_ms'] as int? ?? 0;
+    final playedAt = session['played_at']?.toString();
+    final decision = session['fuzzy_decision']?.toString() ?? 'Manter';
 
     // round_details from performance_data
     final perfData = session['performance_data'];
@@ -1197,7 +1335,11 @@ class _SessionTileState extends State<_SessionTile> {
                         color: const Color(0xFF009688).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(gameIcon, color: const Color(0xFF009688), size: 18),
+                      child: Icon(
+                        gameIcon,
+                        color: const Color(0xFF009688),
+                        size: 18,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1206,18 +1348,28 @@ class _SessionTileState extends State<_SessionTile> {
                         children: [
                           Text(
                             gameName,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B)),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Color(0xFF1E293B),
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             widget.formatDateTime(playedAt),
-                            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey.shade500,
+                            ),
                           ),
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: decisionColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -1247,8 +1399,16 @@ class _SessionTileState extends State<_SessionTile> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildStatDetail('Nível', '$initialLevel ➔ $finalLevel'),
-                    _buildStatDetail('Acertos', '$hits/$total (${(accuracy * 100).toStringAsFixed(0)}%)'),
-                    _buildStatDetail('Tempo Médio', avgTimeMs > 0 ? '${(avgTimeMs / 1000).toStringAsFixed(1)}s' : '-'),
+                    _buildStatDetail(
+                      'Acertos',
+                      '$hits/$total (${(accuracy * 100).toStringAsFixed(0)}%)',
+                    ),
+                    _buildStatDetail(
+                      'Tempo Médio',
+                      avgTimeMs > 0
+                          ? '${(avgTimeMs / 1000).toStringAsFixed(1)}s'
+                          : '-',
+                    ),
                   ],
                 ),
                 // "Ver rodadas" button — only if round_details exists
@@ -1315,15 +1475,18 @@ class _SessionTileState extends State<_SessionTile> {
                         const SizedBox(height: 8),
                         ...roundDetails.map((rd) {
                           final r = rd as Map<String, dynamic>;
-                          final roundNum  = r['round'] as int? ?? 0;
-                          final rHits     = r['hits'] as int? ?? 0;
+                          final roundNum = r['round'] as int? ?? 0;
+                          final rHits = r['hits'] as int? ?? 0;
                           final rMistakes = r['mistakes'] as int? ?? 0;
-                          final rTimeMs   = r['time_ms'] as int? ?? 0;
-                          final perfect   = rMistakes == 0;
+                          final rTimeMs = r['time_ms'] as int? ?? 0;
+                          final perfect = rMistakes == 0;
 
                           return Container(
                             margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(10),
@@ -1350,7 +1513,9 @@ class _SessionTileState extends State<_SessionTile> {
                                           ? Icons.check_circle_rounded
                                           : Icons.warning_amber_rounded,
                                       size: 16,
-                                      color: perfect ? Colors.green.shade600 : Colors.orange.shade700,
+                                      color: perfect
+                                          ? Colors.green.shade600
+                                          : Colors.orange.shade700,
                                     ),
                                   ),
                                 ),
@@ -1373,8 +1538,12 @@ class _SessionTileState extends State<_SessionTile> {
                                 const SizedBox(width: 6),
                                 _buildRoundBadge(
                                   '✘ $rMistakes erro${rMistakes != 1 ? 's' : ''}',
-                                  rMistakes == 0 ? Colors.grey.shade400 : Colors.orange.shade700,
-                                  rMistakes == 0 ? Colors.grey.shade50 : Colors.orange.shade50,
+                                  rMistakes == 0
+                                      ? Colors.grey.shade400
+                                      : Colors.orange.shade700,
+                                  rMistakes == 0
+                                      ? Colors.grey.shade50
+                                      : Colors.orange.shade50,
                                 ),
                                 const SizedBox(width: 6),
                                 _buildRoundBadge(
@@ -1400,9 +1569,19 @@ class _SessionTileState extends State<_SessionTile> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+        ),
         const SizedBox(height: 2),
-        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF475569),
+          ),
+        ),
       ],
     );
   }
@@ -1416,7 +1595,11 @@ class _SessionTileState extends State<_SessionTile> {
       ),
       child: Text(
         text,
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: textColor),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
       ),
     );
   }

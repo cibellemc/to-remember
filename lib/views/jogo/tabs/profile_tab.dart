@@ -164,7 +164,7 @@ class _ProfileTabState extends State<ProfileTab> with SingleTickerProviderStateM
                           suffix: profile['linking_suffix'] ?? '----',
                           onCopy: () {
                             if (repo.connectionCode != null) {
-                              _copyCode('Cód. de vínculo: ${repo.connectionCode}\nSufixo: #${profile['linking_suffix'] ?? ''}');
+                              _copyCode('Cód. de vínculo: ${repo.connectionCode}\nSufixo: ${profile['linking_suffix'] ?? ''}');
                             }
                           },
                         ),
