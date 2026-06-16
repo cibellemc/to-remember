@@ -74,6 +74,13 @@ class CaregiverViewModel extends ChangeNotifier {
         targetPatientId: targetPatientId,
       );
       await fetchConnectedPatients();
+
+      final linkedPatientId = targetPatientId ?? patient?['id']?.toString();
+      if (_selectedPatient != null && _selectedPatient!['id'].toString() == linkedPatientId) {
+        await fetchPatientGameData(linkedPatientId!);
+        await fetchPatientCaregivers(linkedPatientId);
+      }
+
       return patient;
     } catch (e) {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
