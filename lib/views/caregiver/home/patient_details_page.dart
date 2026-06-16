@@ -885,8 +885,8 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
       }
     }
 
-    // For chart, show chronologically (oldest to newest), limit to last 10
-    final chartSessions = sessions.reversed.take(10).toList();
+    // For chart, show chronologically (oldest to newest)
+    final chartSessions = sessions.toList().reversed.toList();
 
     final List<double> chartData = [];
     final List<String> chartLabels = [];
@@ -900,7 +900,8 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
 
       try {
         final date = DateTime.parse(s['played_at'].toString()).toLocal();
-        chartLabels.add("${date.day}/${date.month}");
+        final timeStr = '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+        chartLabels.add("${date.day}/${date.month} $timeStr");
       } catch (_) {
         chartLabels.add("#${i + 1}");
       }
@@ -1060,7 +1061,6 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
             )
           else
             ...sessions
-                .take(15)
                 .map(
                   (s) =>
                       _SessionTile(session: s, formatDateTime: _formatDateTime),
