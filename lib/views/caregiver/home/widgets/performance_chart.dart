@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 class PerformanceChart extends StatelessWidget {
-  final List<double> dataPoints;
+  final List<double> minPoints;
+  final List<double> maxPoints;
+  final List<int> matchCounts;
   final List<String> xLabels;
   final double minY;
   final double maxY;
@@ -11,7 +13,9 @@ class PerformanceChart extends StatelessWidget {
 
   const PerformanceChart({
     super.key,
-    required this.dataPoints,
+    required this.minPoints,
+    required this.maxPoints,
+    required this.matchCounts,
     required this.xLabels,
     required this.minY,
     required this.maxY,
@@ -22,7 +26,7 @@ class PerformanceChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (dataPoints.isEmpty) {
+    if (maxPoints.isEmpty) {
       return Container(
         height: 200,
         decoration: BoxDecoration(
@@ -34,7 +38,7 @@ class PerformanceChart extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.show_chart_rounded, size: 48, color: Colors.grey.shade300),
+              Icon(Icons.bar_chart_rounded, size: 48, color: Colors.grey.shade300),
               const SizedBox(height: 8),
               Text(
                 emptyMessage,
@@ -51,7 +55,7 @@ class PerformanceChart extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 16, 16, 8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -67,179 +71,255 @@ class PerformanceChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            height: 180,
-            child: Row(
-              children: [
-                // Y Axis labels
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: List.generate(4, (index) {
-                    final val = maxY - (index * (maxY - minY) / 3);
-                    return SizedBox(
-                      width: 38,
-                      child: Text(
-                        yLabelFormatter(val),
-                        style: TextStyle(
-                          color: Colors.grey.shade500,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.right,
-                      ),
-                    );
-                  }),
-                ),
-                const SizedBox(width: 8),
-                // Chart area
-                Expanded(
-                  child: CustomPaint(
-                    painter: _LineChartPainter(
-                      points: dataPoints,
-                      minY: minY,
-                      maxY: maxY,
-                      color: color,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          // X Axis labels
+          // Legend
           Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              const SizedBox(width: 46), // Align with chart area
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: List.generate(xLabels.length, (index) {
-                    return Expanded(
-                      child: Text(
-                        xLabels[index],
-                        style: TextStyle(
-                          color: Colors.grey.shade400,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-                  }),
-                ),
-              ),
+              _buildLegendItem(const Color(0xFFF59E0B), 'Pior resultado'),
+              const SizedBox(width: 16),
+              _buildLegendItem(const Color(0xFF0D9488), 'Melhor resultado'),
             ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 220,
+            child: CustomPaint(
+              painter: _BarChartPainter(
+                minPoints: minPoints,
+                maxPoints: maxPoints,
+                matchCounts: matchCounts,
+                xLabels: xLabels,
+                minY: minY,
+                maxY: maxY,
+                color: color,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildLegendItem(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.grey.shade600,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
-class _LineChartPainter extends CustomPainter {
-  final List<double> points;
+class _BarChartPainter extends CustomPainter {
+  final List<double> minPoints;
+  final List<double> maxPoints;
+  final List<int> matchCounts;
+  final List<String> xLabels;
   final double minY;
   final double maxY;
   final Color color;
 
-  _LineChartPainter({
-    required this.points,
+  final TextPainter _textPainter = TextPainter(
+    textDirection: TextDirection.ltr,
+  );
+
+  _BarChartPainter({
+    required this.minPoints,
+    required this.maxPoints,
+    required this.matchCounts,
+    required this.xLabels,
     required this.minY,
     required this.maxY,
     required this.color,
   });
+
+  void _drawText(Canvas canvas, String text, double x, double y, Color color, double fontSize,
+      {bool bold = false, TextAlign align = TextAlign.center}) {
+    _textPainter.text = TextSpan(
+      text: text,
+      style: TextStyle(
+        color: color,
+        fontSize: fontSize,
+        fontWeight: bold ? FontWeight.bold : FontWeight.w500,
+      ),
+    );
+    _textPainter.layout();
+
+    double xOffset = x;
+    if (align == TextAlign.center) {
+      xOffset = x - _textPainter.width / 2;
+    } else if (align == TextAlign.right) {
+      xOffset = x - _textPainter.width;
+    }
+
+    _textPainter.paint(canvas, Offset(xOffset, y - _textPainter.height / 2));
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     final double w = size.width;
     final double h = size.height;
 
-    // Draw background grid lines (horizontal)
+    const double leftMargin = 45.0;
+    const double rightMargin = 15.0;
+    const double topPadding = 30.0;
+    const double bottomPadding = 55.0;
+
+    final double chartWidth = w - leftMargin - rightMargin;
+    final double chartHeight = h - topPadding - bottomPadding;
+
+    // Draw background grid lines (horizontal) and Y labels
     final gridPaint = Paint()
       ..color = Colors.grey.shade100
-      ..strokeWidth = 1;
+      ..strokeWidth = 1.5;
 
     for (int i = 0; i < 4; i++) {
-      final yGrid = i * h / 3;
-      canvas.drawLine(Offset(0, yGrid), Offset(w, yGrid), gridPaint);
+      final val = maxY - (i * (maxY - minY) / 3);
+      final yGrid = topPadding + (i * chartHeight / 3);
+
+      canvas.drawLine(Offset(leftMargin, yGrid), Offset(w - rightMargin, yGrid), gridPaint);
+
+      _drawText(
+        canvas,
+        "${(val * 100).round()}%",
+        leftMargin - 12,
+        yGrid,
+        Colors.grey.shade500,
+        11,
+        bold: true,
+        align: TextAlign.right,
+      );
     }
 
-    if (points.isEmpty) return;
+    if (maxPoints.isEmpty) return;
 
-    // Calculate chart line path
-    final double dx = points.length > 1 ? w / (points.length - 1) : w;
     final double range = maxY - minY;
 
     double getY(double val) {
-      if (range == 0) return h / 2;
+      if (range == 0) return topPadding + chartHeight / 2;
       final pct = ((val - minY) / range).clamp(0.0, 1.0);
-      return h - (pct * h);
+      return topPadding + chartHeight - (pct * chartHeight);
     }
 
-    final path = Path();
-    final fillPath = Path();
+    final double sectionWidth = chartWidth / maxPoints.length;
+    // Adapt bar width dynamically, but make it significantly thicker
+    final double barWidth = (sectionWidth * 0.25).clamp(16.0, 36.0);
 
-    for (int i = 0; i < points.length; i++) {
-      final x = i * dx;
-      final y = getY(points[i]);
+    for (int i = 0; i < maxPoints.length; i++) {
+      final centerX = leftMargin + (i * sectionWidth) + (sectionWidth / 2);
+      final yTop = getY(maxPoints[i]);
+      final yBottom = getY(minPoints[i]);
+      final count = matchCounts[i];
 
-      if (i == 0) {
-        path.moveTo(x, y);
-        fillPath.moveTo(x, h);
-        fillPath.lineTo(x, y);
+      // Draw X-axis label (date)
+      _drawText(canvas, xLabels[i], centerX, h - 34.0, Colors.grey.shade700, 12, bold: true);
+
+      // Draw match count label
+      final countText = count == 1 ? "1 partida" : "$count partidas";
+      _drawText(canvas, countText, centerX, h - 14.0, Colors.grey.shade400, 10);
+
+      if (count == 1 || (maxPoints[i] - minPoints[i]).abs() < 0.005) {
+        // Draw single bar (Best)
+        final yBottomBar = getY(0.0); // Baseline at 0%
+
+        final rect = RRect.fromLTRBAndCorners(
+          centerX - barWidth / 2,
+          yTop,
+          centerX + barWidth / 2,
+          yBottomBar,
+          topLeft: Radius.circular(barWidth / 4),
+          topRight: Radius.circular(barWidth / 4),
+        );
+
+        final fillPaint = Paint()..color = const Color(0xFF0D9488);
+
+        canvas.drawRRect(rect, fillPaint);
+
+        // Draw accuracy value on top
+        _drawText(
+          canvas,
+          "${(maxPoints[i] * 100).round()}%",
+          centerX,
+          yTop - 12,
+          const Color(0xFF0D9488),
+          12,
+          bold: true,
+        );
       } else {
-        path.lineTo(x, y);
-        fillPath.lineTo(x, y);
+        // Draw two bars side-by-side: Worst (left) and Best (right)
+        const double gap = 4.0;
+        final leftBarCenterX = centerX - barWidth / 2 - gap;
+        final rightBarCenterX = centerX + barWidth / 2 + gap;
+        final yBottomBar = getY(0.0); // Baseline at 0%
+
+        // 1. Worst Bar (Left)
+        final worstRect = RRect.fromLTRBAndCorners(
+          leftBarCenterX - barWidth / 2,
+          yBottom,
+          leftBarCenterX + barWidth / 2,
+          yBottomBar,
+          topLeft: Radius.circular(barWidth / 4),
+          topRight: Radius.circular(barWidth / 4),
+        );
+        final worstPaint = Paint()..color = const Color(0xFFF59E0B);
+        canvas.drawRRect(worstRect, worstPaint);
+        // Draw worst value on top
+        _drawText(
+          canvas,
+          "${(minPoints[i] * 100).round()}%",
+          leftBarCenterX,
+          yBottom - 12,
+          const Color(0xFFD97706),
+          11,
+          bold: true,
+        );
+
+        // 2. Best Bar (Right)
+        final bestRect = RRect.fromLTRBAndCorners(
+          rightBarCenterX - barWidth / 2,
+          yTop,
+          rightBarCenterX + barWidth / 2,
+          yBottomBar,
+          topLeft: Radius.circular(barWidth / 4),
+          topRight: Radius.circular(barWidth / 4),
+        );
+        final bestPaint = Paint()..color = const Color(0xFF0D9488);
+        canvas.drawRRect(bestRect, bestPaint);
+        // Draw best value on top
+        _drawText(
+          canvas,
+          "${(maxPoints[i] * 100).round()}%",
+          rightBarCenterX,
+          yTop - 12,
+          const Color(0xFF0D9488),
+          11,
+          bold: true,
+        );
       }
-    }
-
-    if (points.length > 1) {
-      fillPath.lineTo((points.length - 1) * dx, h);
-      fillPath.close();
-
-      // Paint background gradient fill under the line
-      final fillPaint = Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            color.withValues(alpha: 0.22),
-            color.withValues(alpha: 0.01),
-          ],
-        ).createShader(Rect.fromLTRB(0, 0, w, h));
-      canvas.drawPath(fillPath, fillPaint);
-    }
-
-    // Paint main connecting line
-    final linePaint = Paint()
-      ..color = color
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    canvas.drawPath(path, linePaint);
-
-    // Paint dots on key values
-    final outerDotPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    final innerDotPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-
-    for (int i = 0; i < points.length; i++) {
-      final x = i * dx;
-      final y = getY(points[i]);
-
-      // Shadow or border effect for the dot
-      canvas.drawCircle(Offset(x, y), 5.5, outerDotPaint);
-      canvas.drawCircle(Offset(x, y), 3.0, innerDotPaint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _LineChartPainter oldDelegate) {
-    return oldDelegate.points != points || oldDelegate.color != color;
+  bool shouldRepaint(covariant _BarChartPainter oldDelegate) {
+    return oldDelegate.maxPoints != maxPoints ||
+        oldDelegate.minPoints != minPoints ||
+        oldDelegate.matchCounts != matchCounts ||
+        oldDelegate.color != color;
   }
 }

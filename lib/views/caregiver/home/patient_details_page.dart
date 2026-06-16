@@ -885,27 +885,44 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
       }
     }
 
-    // For chart, show chronologically (oldest to newest)
-    final chartSessions = sessions.toList().reversed.toList();
-
-    final List<double> chartData = [];
-    final List<String> chartLabels = [];
-    for (int i = 0; i < chartSessions.length; i++) {
-      final s = chartSessions[i];
+    // For chart, group by day chronologically (oldest to newest)
+    final Map<String, List<double>> dailyAccuracies = {};
+    for (var s in sessions.toList().reversed) {
       final h = s['hits'] as int? ?? 0;
       final m = s['mistakes'] as int? ?? 0;
       final tot = h + m;
       final acc = tot > 0 ? h / tot : 0.0;
-      chartData.add(acc);
 
       try {
         final date = DateTime.parse(s['played_at'].toString()).toLocal();
-        final timeStr = '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-        chartLabels.add("${date.day}/${date.month} $timeStr");
-      } catch (_) {
-        chartLabels.add("#${i + 1}");
-      }
+        final dayKey = "${date.day}/${date.month}";
+        if (!dailyAccuracies.containsKey(dayKey)) {
+          dailyAccuracies[dayKey] = [];
+        }
+        dailyAccuracies[dayKey]!.add(acc);
+      } catch (_) {}
     }
+
+    final List<double> minData = [];
+    final List<double> maxData = [];
+    final List<int> matchCounts = [];
+    final List<String> chartLabels = [];
+
+    dailyAccuracies.forEach((day, accList) {
+      chartLabels.add(day);
+      double minAcc = 1.0;
+      double maxAcc = 0.0;
+      for (var a in accList) {
+        if (a < minAcc) minAcc = a;
+        if (a > maxAcc) maxAcc = a;
+      }
+      if (accList.isEmpty) {
+        minAcc = 0.0;
+      }
+      minData.add(minAcc);
+      maxData.add(maxAcc);
+      matchCounts.add(accList.length);
+    });
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -1023,7 +1040,9 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
           ),
           const SizedBox(height: 12),
           PerformanceChart(
-            dataPoints: chartData,
+            minPoints: minData,
+            maxPoints: maxData,
+            matchCounts: matchCounts,
             xLabels: chartLabels,
             minY: 0.0,
             maxY: 1.0,
