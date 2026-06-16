@@ -962,7 +962,10 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
               ),
             )
           else
-            ...filteredSessions.take(15).map((s) => _buildSessionTile(s)),
+            ...filteredSessions.take(15).map((s) => _SessionTile(
+              session: s,
+              formatDateTime: _formatDateTime,
+            )),
 
           const SizedBox(height: 100),
         ],
@@ -1106,18 +1109,47 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
       return dateStr;
     }
   }
+}
 
-  Widget _buildSessionTile(Map<String, dynamic> session) {
-    final gameType = session['game_type']?.toString() ?? '';
+// ───────────────────────────────────────────────────────────────────────────────
+// SESSION TILE WITH EXPANDABLE ROUND DETAILS
+// ───────────────────────────────────────────────────────────────────────────────
+
+class _SessionTile extends StatefulWidget {
+  final Map<String, dynamic> session;
+  final String Function(String?) formatDateTime;
+
+  const _SessionTile({
+    required this.session,
+    required this.formatDateTime,
+  });
+
+  @override
+  State<_SessionTile> createState() => _SessionTileState();
+}
+
+class _SessionTileState extends State<_SessionTile> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final session = widget.session;
+    final gameType     = session['game_type']?.toString() ?? '';
     final initialLevel = session['initial_level'] as int? ?? 1;
-    final finalLevel = session['final_level'] as int? ?? 1;
-    final hits = session['hits'] as int? ?? 0;
-    final mistakes = session['mistakes'] as int? ?? 0;
-    final total = hits + mistakes;
-    final accuracy = total > 0 ? (hits / total) : 0.0;
-    final avgTimeMs = session['avg_response_time_ms'] as int? ?? 0;
-    final playedAt = session['played_at']?.toString();
-    final decision = session['fuzzy_decision']?.toString() ?? 'Manter';
+    final finalLevel   = session['final_level'] as int? ?? 1;
+    final hits         = session['hits'] as int? ?? 0;
+    final mistakes     = session['mistakes'] as int? ?? 0;
+    final total        = hits + mistakes;
+    final accuracy     = total > 0 ? (hits / total) : 0.0;
+    final avgTimeMs    = session['avg_response_time_ms'] as int? ?? 0;
+    final playedAt     = session['played_at']?.toString();
+    final decision     = session['fuzzy_decision']?.toString() ?? 'Manter';
+
+    // round_details from performance_data
+    final perfData = session['performance_data'];
+    final List<dynamic> roundDetails = (perfData is Map)
+        ? (perfData['round_details'] as List? ?? [])
+        : [];
 
     String gameName = 'Jogo';
     IconData gameIcon = Icons.sports_esports;
@@ -1144,7 +1176,6 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -1153,87 +1184,240 @@ class _PatientPerformancePageState extends State<PatientPerformancePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF009688).withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(gameIcon, color: const Color(0xFF009688), size: 18),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Text(
-                      gameName,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B)),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF009688).withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(gameIcon, color: const Color(0xFF009688), size: 18),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _formatDateTime(playedAt),
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            gameName,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B)),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.formatDateTime(playedAt),
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: decisionColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(decisionIcon, color: decisionColor, size: 12),
-                    const SizedBox(width: 4),
-                    Text(
-                      decision,
-                      style: TextStyle(
-                        color: decisionColor,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: decisionColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(decisionIcon, color: decisionColor, size: 12),
+                          const SizedBox(width: 4),
+                          Text(
+                            decision,
+                            style: TextStyle(
+                              color: decisionColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildStatDetail('Nível', '$initialLevel ➔ $finalLevel'),
+                    _buildStatDetail('Acertos', '$hits/$total (${(accuracy * 100).toStringAsFixed(0)}%)'),
+                    _buildStatDetail('Tempo Médio', avgTimeMs > 0 ? '${(avgTimeMs / 1000).toStringAsFixed(1)}s' : '-'),
+                  ],
+                ),
+                // "Ver rodadas" button — only if round_details exists
+                if (roundDetails.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: () => setState(() => _expanded = !_expanded),
+                    child: Row(
+                      children: [
+                        Text(
+                          _expanded ? 'Ocultar rodadas' : 'Ver rodadas',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF009688),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        AnimatedRotation(
+                          turns: _expanded ? 0.5 : 0.0,
+                          duration: const Duration(milliseconds: 200),
+                          child: const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            size: 18,
+                            color: Color(0xFF009688),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFFF1F5F9)),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildSessionStatDetail('Nível', '$initialLevel ➔ $finalLevel'),
-              _buildSessionStatDetail('Acertos', '$hits/$total (${(accuracy * 100).toStringAsFixed(0)}%)'),
-              _buildSessionStatDetail('Tempo Médio', avgTimeMs > 0 ? '${(avgTimeMs / 1000).toStringAsFixed(1)}s' : '-'),
-            ],
+          // Expandable round details
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            child: _expanded
+                ? Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(16),
+                      ),
+                      border: Border(
+                        top: BorderSide(color: Colors.grey.shade100),
+                      ),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Detalhes por rodada',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF64748B),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ...roundDetails.map((rd) {
+                          final r = rd as Map<String, dynamic>;
+                          final roundNum  = r['round'] as int? ?? 0;
+                          final rHits     = r['hits'] as int? ?? 0;
+                          final rMistakes = r['mistakes'] as int? ?? 0;
+                          final rTimeMs   = r['time_ms'] as int? ?? 0;
+                          final perfect   = rMistakes == 0;
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: perfect
+                                    ? Colors.green.withValues(alpha: 0.2)
+                                    : Colors.orange.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: perfect
+                                        ? Colors.green.withValues(alpha: 0.12)
+                                        : Colors.orange.withValues(alpha: 0.12),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      perfect
+                                          ? Icons.check_circle_rounded
+                                          : Icons.warning_amber_rounded,
+                                      size: 16,
+                                      color: perfect ? Colors.green.shade600 : Colors.orange.shade700,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Rodada $roundNum',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF334155),
+                                    ),
+                                  ),
+                                ),
+                                _buildRoundBadge(
+                                  '✔ $rHits acerto${rHits != 1 ? 's' : ''}',
+                                  Colors.green.shade700,
+                                  Colors.green.shade50,
+                                ),
+                                const SizedBox(width: 6),
+                                _buildRoundBadge(
+                                  '✘ $rMistakes erro${rMistakes != 1 ? 's' : ''}',
+                                  rMistakes == 0 ? Colors.grey.shade400 : Colors.orange.shade700,
+                                  rMistakes == 0 ? Colors.grey.shade50 : Colors.orange.shade50,
+                                ),
+                                const SizedBox(width: 6),
+                                _buildRoundBadge(
+                                  '⏱ ${(rTimeMs / 1000).toStringAsFixed(1)}s',
+                                  Colors.blueGrey.shade600,
+                                  Colors.blueGrey.shade50,
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSessionStatDetail(String label, String value) {
+  Widget _buildStatDetail(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
-        ),
+        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
         const SizedBox(height: 2),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
-        ),
+        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
       ],
+    );
+  }
+
+  Widget _buildRoundBadge(String text, Color textColor, Color bgColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: textColor),
+      ),
     );
   }
 }
